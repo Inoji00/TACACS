@@ -20,7 +20,7 @@ Nếu cần cài Docker Engine hoặc plugin, dùng [hướng dẫn Docker Engin
 ## Tải source và cài
 
 ```bash
-git clone https://github.com/Inoji00/TNAC-.git 'TNAC+'
+git clone https://github.com/Inoji00/TACACS.git 'TNAC+'
 cd 'TNAC+'
 sudo bash install.sh
 ```
@@ -45,3 +45,5 @@ sudo bash tnac credentials
 Chạy credentials trong terminal riêng. Mở URL HTTPS do trình cài in ra và đăng nhập bằng username và password khởi tạo. Xác minh chứng chỉ khởi tạo theo file công khai data/vm-appliance/localhost-ca.pem trước khi đăng nhập. Sau khi vào giao diện, đổi mật khẩu khởi tạo và thêm switch ở Network Resources → Devices. Mỗi thiết bị dùng IP nguồn và shared secret riêng.
 
 Bộ cài dành cho khởi tạo mới. Nếu đã có trạng thái triển khai, dùng `sudo bash tnac status` để xác minh stack. Xem [CLI vận hành](OPERATIONS.vi.md) để kiểm tra dịch vụ và cài chứng chỉ CA cho tên miền quản trị.
+
+Bộ cài bật systemd timer để cập nhật **Services** và **System resources** khoảng một phút một lần. Với bản đã cài, cập nhật source rồi chạy `sudo bash tnac enable-monitoring`.

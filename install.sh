@@ -37,4 +37,5 @@ docker build -f Dockerfile.postgres -t tnac-postgres:16.16-r2 .
 .venv/bin/python scripts/vm_preflight.py --subnet "$subnet"
 .venv/bin/python scripts/vm_appliance.py init --subnet "$subnet"
 .venv/bin/python scripts/vm_appliance.py status
+bash tnac enable-monitoring
 printf '%s\n' 'Run sudo bash tnac credentials in a private terminal.'

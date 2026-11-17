@@ -1,6 +1,7 @@
 """Record actual Docker port bindings and bounded readiness probes; never changes ports."""
 from datetime import datetime,timezone
 import json
+from ipaddress import IPv4Address
 import re
 import shutil
 import socket
@@ -86,13 +87,18 @@ def capture(directory,item,mode,server):
     services={}
     service_started_at={}
     probe_latency_ms={}
+    containers={}
     for service in ('app','admin','proxy','postgres'):
-        container=local.run(local.command(directory,item)+['ps','-a','-q',service]).stdout.strip()
+        container=local.run(['docker','ps','-aq',
+            '--filter','label=com.docker.compose.project='+item['project'],
+            '--filter','label=com.docker.compose.service='+service,
+            '--filter','label=com.docker.compose.oneoff=False']).stdout.strip()
         if not container:
             services[service]='missing'
             continue
         if not re.fullmatch('[0-9a-f]{12,64}',container):
             raise ValueError('ambiguous container')
+        containers[service]=container
         state=json.loads(local.run(['docker','inspect','--format','{{json .State}}',container]).stdout)
         status=state.get('Status')
         health=(state.get('Health') or {}).get('Status')
@@ -107,9 +113,9 @@ def capture(directory,item,mode,server):
             status if status in ('running','exited','created','paused','restarting','dead','removing') else 'unknown')
 
     for service,container_port,label in (('app','49/tcp','tacacs'),('postgres','8443/tcp','admin')):
-        container=local.run(local.command(directory,item)+['ps','-q',service]).stdout.strip()
-        if not re.fullmatch('[0-9a-f]{12,64}',container):continue
-        ports=json.loads(local.run(['docker','inspect','--format','{{json .NetworkSettings.Ports}}',container]).stdout)
+        container=containers.get(service)
+        if container is None:continue
+        ports=json.loads(local.run(['docker','inspect','--format','{{json .NetworkSettings.Ports}}',container]).stdout) or {}
         for binding in ports.get(container_port) or []:
             endpoints.append(dict(service=label,address=binding['HostIp'],port=int(binding['HostPort'])))
     tcp_probe=https_probe=False
@@ -125,11 +131,15 @@ def capture(directory,item,mode,server):
         profile=json.loads(profile_path.read_text(encoding='utf-8')) if mode=='vm' and profile_path.is_file() else {}
         begin=perf_counter()
         if profile.get('admin_domain'):
-            from vm_appliance import probe_admin
+            try:
+                from admin_endpoint import probe_admin
+            except ModuleNotFoundError:
+                from tacacs_appliance.admin_endpoint import probe_admin
             probe_admin(profile['admin_domain'],profile['admin_ip'],directory/'localhost-ca.pem')
             https_probe=True
         else:
-            with urlopen('https://localhost:8443/',context=ssl.create_default_context(cafile=str(directory/'localhost-ca.pem')),timeout=5) as response:
+            address=str(IPv4Address(profile['admin_ip'])) if profile.get('admin_ip') else 'localhost'
+            with urlopen(f'https://{address}:8443/',context=ssl.create_default_context(cafile=str(directory/'localhost-ca.pem')),timeout=5) as response:
                 https_probe=response.status==200
         if https_probe:
             probe_latency_ms['proxy']=round((perf_counter()-begin)*1000,1)

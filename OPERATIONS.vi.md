@@ -40,3 +40,15 @@ sudo bash tnac status
 ```
 
 Mở `https://tnac.example.net:8443/` sau khi trạng thái ổn định.
+
+## Giám sát Dashboard
+
+Bản cài mới tự bật giám sát định kỳ. Với bản đã cài, chạy sau khi cập nhật source:
+
+```bash
+sudo bash tnac enable-monitoring
+systemctl list-timers --all tnac-snapshot.timer
+sudo journalctl -u tnac-snapshot.service -n 20 --no-pager
+```
+
+Timer lấy trạng thái container, tài nguyên VM và kiểm tra endpoint HTTPS đã cấu hình khoảng một phút một lần. Nếu Dashboard vẫn báo **Not currently verified**, kiểm tra `sudo bash tnac status` và nhật ký của service. Khi gỡ bản cài, tắt timer bằng `sudo systemctl disable --now tnac-snapshot.timer`.

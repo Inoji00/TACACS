@@ -40,3 +40,15 @@ sudo bash tnac status
 ```
 
 Once the services are ready, open `https://tnac.example.net:8443/`.
+
+## Dashboard monitoring
+
+Fresh installations enable periodic monitoring automatically. To enable it on an existing installation after updating the source:
+
+```bash
+sudo bash tnac enable-monitoring
+systemctl list-timers --all tnac-snapshot.timer
+sudo journalctl -u tnac-snapshot.service -n 20 --no-pager
+```
+
+The timer samples container status, VM resources, and the configured HTTPS endpoint about once a minute. If the dashboard still shows **Not currently verified**, check `sudo bash tnac status` and the service journal. If you remove this deployment, disable the timer with `sudo systemctl disable --now tnac-snapshot.timer`.
