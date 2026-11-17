@@ -20,7 +20,7 @@ If Docker Engine or its plugins are missing, follow the [Docker Engine installat
 ## Download and install
 
 ```bash
-git clone https://github.com/Inoji00/TNAC-.git 'TNAC+'
+git clone https://github.com/Inoji00/TACAS.git 'TNAC+'
 cd 'TNAC+'
 sudo bash install.sh
 ```
