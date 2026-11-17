@@ -1,0 +1,13 @@
+.venv/
+data/
+secrets/
+provisioning/
+admin-secrets/
+.env
+.env.*
+__pycache__/
+*.egg-info/
+*.dump
+*.pem
+*.key
+*.log

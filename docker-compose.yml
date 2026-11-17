@@ -1,0 +1,48 @@
+services:
+  app:
+    build: .
+    environment: {TZ: Asia/Ho_Chi_Minh, PGTZ: UTC}
+    command: [python, -m, tacacs_appliance, --config, /etc/tacacs/service.toml, --health-port, '9090']
+    volumes:
+      - ./config/service.toml:/etc/tacacs/service.toml:ro
+      - ./secrets:/run/tacacs-secrets:ro
+    ports:
+      - '${TACACS_BIND_ADDRESS:-127.0.0.1}:49:49/tcp'
+    sysctls:
+      net.ipv4.ip_unprivileged_port_start: '0'
+    healthcheck:
+      test: [CMD, python, -c, 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:9090/health/ready", timeout=8).read()']
+      interval: 15s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      postgres: {condition: service_healthy}
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    networks: [private]
+  postgres:
+    image: tnac-postgres:16.16-r2
+    command: [postgres, -c, timezone=UTC, -c, log_timezone=Asia/Ho_Chi_Minh]
+    environment:
+      TZ: Asia/Ho_Chi_Minh
+      PGTZ: UTC
+      POSTGRES_DB: tacacs
+      POSTGRES_USER: tacacs_app
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets: [postgres_password]
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    networks: [private]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tacacs_app -d tacacs"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+networks: {private: {internal: true}}
+volumes: {postgres-data: {}}
+secrets:
+  postgres_password: {file: ./secrets/postgres_password}

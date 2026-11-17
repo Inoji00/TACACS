@@ -1,0 +1,23 @@
+# Allowlist build inputs: runtime secrets/configuration never reach the daemon.
+**
+!Dockerfile
+!Dockerfile.postgres
+!Dockerfile.offline
+!Dockerfile.test-offline
+!.dockerignore
+!pyproject.toml
+!README.md
+!src/
+!src/**
+!migrations/
+!migrations/*.sql
+src/**/__pycache__/
+src/**/*.pyc
+src/**/*.egg-info/
+!bin/
+!bin/linux-wheels/
+!bin/linux-wheels/*.whl
+!bin/linux-test-wheels/
+!bin/linux-test-wheels/*.whl
+!artifacts/
+!artifacts/linux-wheels.sha256.json

@@ -1,0 +1,28 @@
+# Linux host-network overlay: keep the reference admin listener loopback-only.
+services:
+  postgres:
+    ports:
+      - '127.0.0.1:${TACACS_ADMIN_DATABASE_PORT:-15432}:5432/tcp'
+  admin:
+    build: .
+    user: '10001:10001'
+    command: [python, -m, tacacs_appliance.admin_runtime, --config, /etc/tacacs/admin.toml]
+    network_mode: host
+    volumes:
+      - ./config/admin.toml:/etc/tacacs/admin.toml:ro
+      - ./admin-secrets:/run/admin-secrets:ro
+    depends_on:
+      postgres: {condition: service_healthy}
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - 'import ssl,urllib.request; context=ssl.create_default_context(cafile="/run/admin-secrets/health_ca.pem"); urllib.request.urlopen("https://localhost:8443/",context=context,timeout=8).read()'
+      interval: 15s
+      timeout: 10s
+      retries: 3

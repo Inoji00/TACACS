@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
+case "${1:-}" in
+    status|start|stop|snapshot|credentials|enroll|rebind|password-only|short-names)
+        export PYTHONPATH="$PWD/src"
+        exec .venv/bin/python scripts/vm_appliance.py "$@"
+        ;;
+    *)
+        printf '%s\n' 'Usage: sudo bash tnac {status|start|stop|snapshot|credentials|enroll|rebind|password-only|short-names}' >&2
+        exit 2
+        ;;
+esac

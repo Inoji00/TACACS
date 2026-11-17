@@ -1,0 +1,40 @@
+# First-install overlay only. Never include this service in normal startup.
+services:
+  initialize:
+    build: .
+    user: '0:0'
+    command:
+      - python
+      - -m
+      - tacacs_appliance.install_database
+      - --dsn-file
+      - /run/provision/owner_dsn
+      - --aaa-password-file
+      - /run/provision/aaa_password
+      - --admin-password-file
+      - /run/provision/admin_password
+      - --operator-password-file
+      - /run/provision/operator_password
+      - --migration-directory
+      - /app/migrations
+      - --aaa-role
+      - '${TACACS_AAA_ROLE:-tacacs_aaa}'
+      - --admin-role
+      - '${TACACS_ADMIN_ROLE:-tacacs_admin}'
+      - --tenant-id
+      - '${TACACS_TENANT_ID:?First-install tenant UUID required}'
+      - --name
+      - '${TACACS_TENANT_NAME:-Local Appliance}'
+      - --username
+      - '${TACACS_OPERATOR_USERNAME:-admin}'
+      - --mfa-reference
+      - '${TACACS_MFA_REFERENCE:?Protected MFA reference required}'
+    volumes:
+      - ./provisioning:/run/provision:ro
+    depends_on:
+      postgres: {condition: service_healthy}
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    networks: [private]

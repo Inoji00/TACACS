@@ -1,0 +1,8 @@
+FROM postgres:16-alpine3.23@sha256:9afe26709faad4c173fea5380b215bd6eb9691b05aa1be5b86cec8e0285da914
+RUN set -eux; \
+    apk add --no-cache su-exec; \
+    rm /usr/local/bin/su-exec /usr/local/bin/gosu; \
+    helper="$(command -v su-exec)"; \
+    test -x "$helper"; \
+    ln -s "$helper" /usr/local/bin/gosu; \
+    test "$(gosu postgres id -u)" = 70
