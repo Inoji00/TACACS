@@ -3,6 +3,7 @@ from uuid import UUID
 import ipaddress
 from .accounting import accounting_details
 from .admin_logs import log_filters
+from .device_console_scope import aaa_log_device_clause, require_aaa_log_scope
 
 
 class AdminAccounting:
@@ -29,9 +30,20 @@ class AdminAccounting:
                 allowed=connection.execute("SELECT 1 FROM admin_grants g JOIN users u ON u.id=g.user_id AND u.tenant_id=g.tenant_id "
                     "WHERE g.tenant_id=%s AND g.user_id=%s AND g.permission='audit.read' AND u.enabled AND NOT u.locked",
                     (self.tenant,UUID(actor))).fetchone()
-                if allowed is None:raise PermissionError('permission denied')
+                scope_clause = ''
+                scope_values = []
+                if allowed is None:
+                    scope = require_aaa_log_scope(connection, self.tenant, actor)
+                    scoped, groups = aaa_log_device_clause(
+                        scope, 'accounting_records.device_id', 'accounting_records.occurred_at')
+                    clauses.append(scoped)
+                    scope_clause = ' AND ' + scoped
+                    scope_values = [self.tenant, *groups]
+                    values.extend(scope_values)
                 if cursor is not None:
-                    anchor=connection.execute('SELECT occurred_at,id FROM accounting_records WHERE tenant_id=%s AND id=%s',(self.tenant,cursor)).fetchone()
+                    anchor=connection.execute(
+                        'SELECT occurred_at,id FROM accounting_records WHERE tenant_id=%s AND id=%s'+scope_clause,
+                        (self.tenant,cursor,*scope_values)).fetchone()
                     if anchor is None:raise ValueError('cursor unavailable')
                     clauses.append('(occurred_at,id)<(%s,%s)');values.extend(anchor)
                 scan_limit=500 if command else limit

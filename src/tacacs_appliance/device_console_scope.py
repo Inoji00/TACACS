@@ -3,7 +3,7 @@ from ipaddress import IPv4Address
 from uuid import UUID
 
 
-ACTIONS = frozenset(('create', 'edit', 'set_enabled', 'delete', 'reveal_secret', 'rotate_secret', 'edit_mappings'))
+ACTIONS = frozenset(('create', 'edit', 'set_enabled', 'delete', 'reveal_secret', 'rotate_secret', 'edit_mappings', 'view_aaa_logs'))
 SCOPE_JSON = ("jsonb_build_object('location_id',s.location_id,'device_type_id',s.device_type_id,"
               "'actions',s.actions,'creation_addresses',s.creation_addresses)")
 
@@ -63,3 +63,22 @@ def require_device_scope(scope, location, device_type):
 def require_action(scope, action):
     if scope is not None and action not in scope['actions']:
         raise PermissionError('permission denied')
+
+
+def require_aaa_log_scope(connection, tenant, actor):
+    scope = load_scope(connection, tenant, actor)
+    if scope is None or 'view_aaa_logs' not in scope['actions']:
+        raise PermissionError('permission denied')
+    return scope
+
+
+def aaa_log_device_clause(scope, address_column, timestamp_column):
+    """Match visible registry devices, excluding events from an earlier scope."""
+    filters = ['d.tenant_id = %s', 'NOT d.deleted', f'host(d.address) = {address_column}',
+               f'{timestamp_column} >= d.aaa_log_scope_since']
+    values = []
+    for name in ('location_id', 'device_type_id'):
+        if scope[name] is not None:
+            filters.append(f'd.{name} = %s')
+            values.append(scope[name])
+    return 'EXISTS (SELECT 1 FROM network_devices d WHERE ' + ' AND '.join(filters) + ')', values

@@ -61,7 +61,7 @@ class AdminApi:
         self._dashboard=dashboard
         self._logs=logs
         self._identities=identities
-        self._identity_limiter=SourceRateLimiter(5,1/60,idle_seconds=600)
+        self._device_write_limiter=SourceRateLimiter(5,1/60,idle_seconds=600)
         self._password_limiter=SourceRateLimiter(3,1/60,idle_seconds=600)
         self._login_limiter = SourceRateLimiter(5, 1 / 60, idle_seconds=600)
 
@@ -176,7 +176,8 @@ class AdminApi:
                     return respond("403 Forbidden", {"error": "request verification failed"})
             if (self._device_operator is not None
                     and path not in {'/api/session', '/api/inventory', '/api/logout', '/api/password',
-                                     '/api/devices', '/api/devices/delete', '/api/devices/secret', '/api/device-groups'}
+                                     '/api/devices', '/api/devices/delete', '/api/devices/secret',
+                                     '/api/device-groups', '/api/logs', '/api/accounting'}
                     and self._device_operator(user_id)):
                 return respond("403 Forbidden", {"error": "permission denied"})
             if path == "/api/session" and method == "GET":
@@ -185,6 +186,8 @@ class AdminApi:
                 session = {"user_id": user_id, "csrf_token": self.csrf_token(token)}
                 if self._device_operator is not None:
                     session["device_operator"] = self._device_operator(user_id)
+                    if session["device_operator"]:
+                        session["device_aaa_logs"] = self._permissions(user_id, "devices.aaa.read")
                 return respond("200 OK", session)
             if path=='/api/inventory' and method=='GET' and self._inventory is not None:
                 if not self._permissions(user_id,'console.read'):return respond('403 Forbidden',{'error':'permission denied'})
@@ -193,7 +196,9 @@ class AdminApi:
                     return respond('200 OK',self._inventory.read(only_user=user_id))
                 return respond('200 OK',self._inventory.read())
             if path in ('/api/logs','/api/reports') and method=='GET' and self._logs is not None:
-                if not self._permissions(user_id,'audit.read'):return respond('403 Forbidden',{'error':'permission denied'})
+                if not (self._permissions(user_id, 'audit.read') or
+                        (path == '/api/logs' and self._permissions(user_id, 'devices.aaa.read'))):
+                    return respond('403 Forbidden', {'error': 'permission denied'})
                 from urllib.parse import parse_qs
                 try:
                     query=environ.get('QUERY_STRING','')
@@ -217,6 +222,8 @@ class AdminApi:
                 if environ.get('QUERY_STRING',''):return respond('400 Bad Request',{'error':'unexpected query'})
                 return respond('200 OK',self._deployment.read())
             if path=='/api/accounting' and method=='GET' and self._accounting is not None:
+                if not (self._permissions(user_id, 'audit.read') or self._permissions(user_id, 'devices.aaa.read')):
+                    return respond('403 Forbidden', {'error': 'permission denied'})
                 from urllib.parse import parse_qs
                 try:
                     query=environ.get('QUERY_STRING','')
@@ -254,7 +261,9 @@ class AdminApi:
                     except PermissionError:return respond('403 Forbidden',{'error':'permission denied'})
                     except (ValueError,TypeError,KeyError):return respond('400 Bad Request',{'error':'invalid device query'})
                 try:
-                    if not self._identity_limiter.allow(user_id):return respond('429 Too Many Requests',{'error':'retry later'})
+                    limited = path == '/api/devices/secret' or not self._permissions(user_id, 'users.manage')
+                    if limited and not self._device_write_limiter.allow(user_id):
+                        return respond('429 Too Many Requests', {'error': 'retry later'})
                     if environ.get('CONTENT_TYPE')!='application/json' or environ.get('QUERY_STRING',''):raise ValueError()
                     length=int(environ.get('CONTENT_LENGTH',''))
                     if not 1<=length<=16384:raise ValueError()
@@ -294,10 +303,9 @@ class AdminApi:
                         return respond('200 OK',IdentityGroups(self._identities).list(user_id,fields.get('after',[None])[0]))
                     return respond('200 OK',self._identities.list_users(user_id,fields.get('after',[None])[0]))
                 except (ValueError,TypeError):return respond('400 Bad Request',{'error':'invalid identity request'})
-            if path in ('/api/identity-groups','/api/identities','/api/identities/state','/api/identities/update','/api/identities/delete','/api/identities/console-access') and method=='POST' and self._identities is not None:
+            if path in ('/api/identity-groups','/api/identities','/api/identities/state','/api/identities/update','/api/identities/delete','/api/identities/unlock','/api/identities/console-access') and method=='POST' and self._identities is not None:
                 from .admin_identities import IdentityProtectedError,IdentityNameUnavailable
                 if not self._permissions(user_id,'users.manage'):return respond('403 Forbidden',{'error':'permission denied'})
-                if not self._identity_limiter.allow(user_id):return respond('429 Too Many Requests',{'error':'retry later'})
                 try:
                     if environ.get('CONTENT_TYPE')!='application/json' or environ.get('QUERY_STRING',''):raise ValueError()
                     length=int(environ.get('CONTENT_LENGTH',''))
@@ -321,7 +329,8 @@ class AdminApi:
                         '/api/identities':({'username','password','group_name'},self._identities.create),
                         '/api/identities/state':({'user_id','enabled'},self._identities.set_enabled),
                         '/api/identities/update':({'user_id','username','password','group_name','enabled'},self._identities.update),
-                        '/api/identities/delete':({'user_id'},self._identities.delete)}
+                        '/api/identities/delete':({'user_id'},self._identities.delete),
+                        '/api/identities/unlock':({'user_id'},self._identities.unlock)}
                     fields,action=actions[path]
                     if not isinstance(payload,dict) or set(payload)!=fields:raise ValueError()
                     return respond('201 Created' if path=='/api/identities' else '200 OK',action(user_id,**payload))

@@ -52,3 +52,17 @@ sudo journalctl -u tnac-snapshot.service -n 20 --no-pager
 ```
 
 The timer samples container status, VM resources, and the configured HTTPS endpoint about once a minute. If the dashboard still shows **Not currently verified**, check `sudo bash tnac status` and the service journal. If you remove this deployment, disable the timer with `sudo systemctl disable --now tnac-snapshot.timer`.
+
+## Delegate AAA logs
+
+In **Users → Edit Web access**, select **View AAA logs**. The user can read authentication, authorization and accounting for registered devices matching both their Location and Device Type. An unfiltered scope covers all registered devices in the tenant. Activity Log and Reports require separate administration access.
+
+Delegated users can see events recorded within the current device assignment, starting at migration 037 for existing devices. A change to Location or Device Type, deletion, or re-registration starts a new log window. Grant changes invalidate the target user's current Web sessions.
+
+## Unlock a user account
+
+In **Users**, select **Unlock** for the locked account and confirm the action. The action is recorded in the Activity Log. Sign in again after unlocking.
+
+## Schema compatibility
+
+An existing database requires migration 037 before starting the v1.0 runtime. Back up PostgreSQL and keep the previous service images before scheduling the migration. The fresh-install procedure creates a new deployment.

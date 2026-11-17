@@ -1,4 +1,4 @@
-# TNAC+
+# TNAC+ v1.0
 
 [English](README.md) · **Tiếng Việt**
 
@@ -9,7 +9,7 @@ TNAC+ là máy chủ TACACS+ để quản trị thiết bị mạng. Web console
 Cần Ubuntu amd64, Python 3.12 trở lên có venv, Docker Engine, Buildx, Compose v2 và IPv4 quản trị. VM cần Internet để tải image nền và dependency.
 
 ```bash
-git clone https://github.com/Inoji00/TACACS.git 'TNAC+'
+git clone --branch v1.0 https://github.com/Inoji00/TACACS.git 'TNAC+'
 cd 'TNAC+'
 sudo bash install.sh
 sudo bash tnac status

@@ -5,6 +5,7 @@ import re
 from uuid import UUID
 from .aaa_events import safe_attempted_username, safe_authorization_details
 from .web_audit_network import audit_ip
+from .device_console_scope import aaa_log_device_clause, require_aaa_log_scope
 
 
 KINDS = ('all', 'aaa', 'activity', 'issues')
@@ -16,7 +17,7 @@ AAA_ACCESS_SQL = "a.source='tacacs' AND a.action IN ('aaa.authentication','aaa.a
 AAA_REMOTE_IP_SQL = f"CASE WHEN ({AAA_ACCESS_SQL}) THEN left(a.security_context->>'remote_address',46) END"
 ATTEMPTED_USERNAME_SQL = f"CASE WHEN (({WEB_ACCESS_SQL}) OR ({AAA_ACCESS_SQL})) AND jsonb_typeof(a.security_context->'attempted_username')='string' THEN left(a.security_context->>'attempted_username',253) END"
 IDENTITY_TARGET = """a.source='admin-identities' AND a.action IN
-    ('identity.create','identity.update','identity.enable','identity.disable','identity.delete',
+    ('identity.create','identity.update','identity.enable','identity.disable','identity.delete','identity.unlock',
      'identity.console.scope','identity.console.grant','identity.console.revoke')"""
 ADMIN_TARGET = f"""(({IDENTITY_TARGET})
     OR (a.source='admin-identities' AND a.action IN ('identity-group.create','identity-group.rename','identity-group.delete'))
@@ -130,7 +131,12 @@ class AdminLogs:
                     "WHERE g.tenant_id=%s AND g.user_id=%s AND g.permission='audit.read' AND u.enabled AND NOT u.locked",
                     (self.tenant, UUID(principal))).fetchone()
                 if allowed is None:
-                    raise PermissionError('permission denied')
+                    if report or filters.get('kind') != 'aaa':
+                        raise PermissionError('permission denied')
+                    scope = require_aaa_log_scope(connection, self.tenant, principal)
+                    scoped, groups = aaa_log_device_clause(scope, 'a.target', 'a.occurred_at')
+                    where += f' AND ({AAA_ACCESS_SQL}) AND {scoped}'
+                    values.extend((self.tenant, *groups))
                 window = dict(since=start.isoformat(), until=end.isoformat())
                 if report:
                     totals = connection.execute('SELECT count(*),count(*) FILTER (WHERE a.source=\'tacacs\'),'

@@ -5,6 +5,7 @@ from argon2 import PasswordHasher
 from psycopg.errors import ForeignKeyViolation
 from .password_timing import bounded_password_work
 from .device_console_scope import SCOPE_JSON, parse_scope
+from .admin_rbac import DEVICE_OPERATOR_PERMISSIONS
 
 
 class IdentityProtectedError(ValueError):pass
@@ -119,6 +120,42 @@ class AdminIdentities:
                            target=str(user), result='success', security_context=details)
         return {'status': 'committed'}
 
+    def unlock(self, actor, user_id):
+        actor, user = UUID(actor), UUID(user_id)
+        if actor == user:
+            raise IdentityProtectedError('identity protected')
+        with self.pool.connection() as connection, connection.transaction():
+            self._authorize(connection, actor)
+            row = connection.execute(
+                'SELECT username,locked FROM users WHERE tenant_id=%s AND id=%s AND NOT deleted FOR UPDATE',
+                (self.tenant, user)).fetchone()
+            if row is None:
+                raise IdentityProtectedError('identity protected')
+            name, locked = row
+            permissions = {permission for permission, in connection.execute(
+                'SELECT permission FROM admin_grants WHERE tenant_id=%s AND user_id=%s',
+                (self.tenant, user)).fetchall()}
+            if permissions and permissions != DEVICE_OPERATOR_PERMISSIONS:
+                raise IdentityProtectedError('identity protected')
+            if not locked:
+                return {'status': 'already_unlocked'}
+
+            if permissions:
+                # Rotate the console grant generation so an old password-only
+                # session cannot become valid again after the lock is cleared.
+                for allow in (False, True):
+                    changed, = connection.execute(
+                        'SELECT set_device_console_access(%s,%s,%s,%s)',
+                        (self.tenant, actor, user, allow)).fetchone()
+                    if changed is not True:
+                        raise IdentityProtectedError('identity protected')
+            connection.execute(
+                'UPDATE users SET locked=false,failed_logins=0 WHERE tenant_id=%s AND id=%s',
+                (self.tenant, user))
+            self.audit(connection, actor=str(actor), source='admin-identities', action='identity.unlock',
+                       target=str(user), result='success', security_context={'target_name': name})
+        return {'status': 'committed'}
+
     def list_users(self, actor, after=None):
         cursor=UUID(after) if after else None
         with self.pool.connection() as connection:
@@ -147,7 +184,9 @@ class AdminIdentities:
                     mode=grant[1] if grant else None,state='blocked' if not enabled or not row[2] or row[3] else 'conflict' if grant is None else 'mapped'))
             return dict(items=items[:20],total=len(items),truncated=len(items)>20)
         return dict(users=[dict(id=str(r[0]),username=r[1],enabled=r[2],locked=r[3],
-                    editable=not r[4] and str(r[0])!=str(actor),groups=r[5],console_permissions=r[6],device_access=r[7],switch_access=access(r)) for r in rows[:100]],
+                    editable=not r[4] and str(r[0])!=str(actor),
+                    unlockable=r[3] and str(r[0])!=str(actor)
+                    and (not r[6] or set(r[6])==DEVICE_OPERATOR_PERMISSIONS),groups=r[5],console_permissions=r[6],device_access=r[7],switch_access=access(r)) for r in rows[:100]],
                     next_after=str(rows[99][0]) if len(rows)>100 else None,
                     command_policy=dict(id=str(policy[0]),revision=policy[1]) if policy else None)
 

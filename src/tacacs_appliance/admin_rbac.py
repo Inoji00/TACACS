@@ -11,6 +11,14 @@ class PostgresAdminPermissions:
         self._pool, self._tenant = pool, UUID(tenant_id)
 
     def __call__(self, user_id: str, permission: str) -> bool:
+        if permission == 'devices.aaa.read':
+            from .device_console_scope import require_aaa_log_scope
+            with self._pool.connection() as connection:
+                try:
+                    require_aaa_log_scope(connection, self._tenant, user_id)
+                except PermissionError:
+                    return False
+            return True
         if permission not in PERMISSIONS:
             return False
         with self._pool.connection() as connection:

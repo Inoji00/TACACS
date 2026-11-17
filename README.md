@@ -1,4 +1,4 @@
-# TNAC+
+# TNAC+ v1.0
 
 **English** · [Tiếng Việt](README.vi.md)
 
@@ -9,7 +9,7 @@ TNAC+ is a TACACS+ server for network device administration. Its web console man
 Use an amd64 Ubuntu VM with Python 3.12 or later and venv, Docker Engine, Buildx, Compose v2, and a management IPv4 address. The VM needs Internet access to fetch base images and dependencies.
 
 ```bash
-git clone https://github.com/Inoji00/TACACS.git 'TNAC+'
+git clone --branch v1.0 https://github.com/Inoji00/TACACS.git 'TNAC+'
 cd 'TNAC+'
 sudo bash install.sh
 sudo bash tnac status

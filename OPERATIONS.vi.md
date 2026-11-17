@@ -52,3 +52,17 @@ sudo journalctl -u tnac-snapshot.service -n 20 --no-pager
 ```
 
 Timer lấy trạng thái container, tài nguyên VM và kiểm tra endpoint HTTPS đã cấu hình khoảng một phút một lần. Nếu Dashboard vẫn báo **Not currently verified**, kiểm tra `sudo bash tnac status` và nhật ký của service. Khi gỡ bản cài, tắt timer bằng `sudo systemctl disable --now tnac-snapshot.timer`.
+
+## Cấp quyền xem nhật ký AAA
+
+Trong **Users → Edit Web access**, chọn **View AAA logs**. User được xem xác thực, cấp quyền và accounting của thiết bị đã đăng ký khớp cả Location lẫn Device Type. Nếu chọn tất cả ở cả hai bộ lọc, quyền áp dụng cho mọi thiết bị đã đăng ký trong tenant. Activity Log và Reports yêu cầu quyền quản trị riêng.
+
+User được ủy quyền chỉ thấy sự kiện trong lần gán phạm vi hiện tại. Với thiết bị đã có, mốc này bắt đầu từ migration 037. Đổi Location, Device Type, xóa hoặc đăng ký lại thiết bị sẽ bắt đầu một khoảng log mới. Lưu quyền sẽ kết thúc các phiên Web đang mở của user.
+
+## Mở khóa tài khoản
+
+Trong **Users**, chọn **Unlock** cho tài khoản đang bị khóa và xác nhận. Activity Log ghi lại thao tác. User đăng nhập lại sau khi được mở khóa.
+
+## Tương thích cơ sở dữ liệu
+
+Cơ sở dữ liệu đang sử dụng cần áp dụng migration 037 trước khi khởi động v1.0. Sao lưu PostgreSQL và giữ image dịch vụ cũ trước khi lên lịch migration. Quy trình cài mới tạo một bản triển khai mới.

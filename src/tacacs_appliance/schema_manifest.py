@@ -35,7 +35,8 @@ EXPECTED_MIGRATIONS = {
     "033_device_console_access.sql": "1a0539b736c83ff0c96baa9e17002daa7bbcd41eb0efbf5a6f2fbb446a15ca5b",
     "034_device_console_scopes.sql": "f24810597b5f316be614a942a3367326c2190d603bfd3b912a45d2ac95ecdef9",
     "035_device_creation_addresses.sql": "d93888ec2b36835e0bda1c5e767fb7194e1f230de8cd9f127805c3d9a7ecafcc",
-    "036_release_deleted_usernames.sql": "5ed36ca5ea4648f0f2b46a91b7df5e59456c632e7dd737be4ad1c3987197abbd"
+    "036_release_deleted_usernames.sql": "5ed36ca5ea4648f0f2b46a91b7df5e59456c632e7dd737be4ad1c3987197abbd",
+    "037_scoped_aaa_logs.sql": "2dc93a34e5ae081f8d2c9acba6685249f65069c981e45d2a72cf965a75f18404",
 }
 
 
