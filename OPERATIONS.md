@@ -1,17 +1,19 @@
-# Vận hành TNAC+
+# TNAC+ operations
 
-Chạy các lệnh sau từ thư mục chứa `tnac` trên máy chủ đã cài TNAC+.
+**English** · [Tiếng Việt](OPERATIONS.vi.md)
 
-| Lệnh | Công dụng |
+Run these commands from the directory containing `tnac` on the server where TNAC+ is installed.
+
+| Command | Purpose |
 | --- | --- |
-| `sudo bash tnac status` | Xem trạng thái và cổng của các container trong stack. |
-| `sudo bash tnac start` | Khởi động stack hiện có. |
-| `sudo bash tnac stop` | Dừng stack. Lệnh giữ volume PostgreSQL. |
-| `sudo bash tnac snapshot` | Cập nhật ảnh chụp trạng thái dịch vụ và endpoint. |
-| `sudo bash tnac credentials` | Hiển thị thông tin khởi tạo và dữ liệu TOTP. Dùng terminal riêng và giữ kín output. |
-| `sudo bash tnac rebind` | Áp dụng IP hoặc tên miền và chứng chỉ HTTPS mới. Thực hiện trong khung bảo trì vì có thể tạo lại dịch vụ. |
+| `sudo bash tnac status` | Show container status and published ports. |
+| `sudo bash tnac start` | Start the existing stack. |
+| `sudo bash tnac stop` | Stop the stack and retain the PostgreSQL volume. |
+| `sudo bash tnac snapshot` | Refresh the service and endpoint status snapshot. |
+| `sudo bash tnac credentials` | Show the initial credentials and TOTP setup data. Run it in a private terminal and keep the output confidential. |
+| `sudo bash tnac rebind` | Apply a new IP address or domain and HTTPS certificate. Use a maintenance window because services may be recreated. |
 
-## Kiểm tra khi dịch vụ lỗi
+## Troubleshoot services
 
 ```bash
 sudo docker ps -a --filter name=tnac- \
@@ -23,11 +25,11 @@ sudo docker exec tnac-db pg_isready -h 127.0.0.1 -U tacacs_app -d tacacs
 sudo docker stats --no-stream tnac-app tnac-admin tnac-proxy tnac-db
 ```
 
-Lấy log của dịch vụ cần chẩn đoán và che thông tin nội bộ trước khi chia sẻ. Nếu HTTPS không phản hồi, kiểm tra `tnac-db`, `tnac-admin` và `tnac-proxy` cùng nhau vì chúng dùng chung network namespace. Nếu TACACS+ không phản hồi, kiểm tra TCP/49 và đối chiếu IP nguồn thiết bị với entry đã đăng ký.
+Read the logs for the service you are investigating and redact internal information before sharing them. For HTTPS issues, check `tnac-db`, `tnac-admin`, and `tnac-proxy` together because they share a network namespace. For TACACS+ issues, check TCP/49 and compare the device's source IP with its registered entry.
 
-## Dùng chứng chỉ quản trị của CA tin cậy
+## Use a trusted CA certificate for Web Admin
 
-DNS phải trỏ về IPv4 quản trị của VM. Chuẩn bị file PEM chứa certificate và intermediate, private key có mode `0600`, và CA bundle dùng để xác minh chứng chỉ. Thay hostname và đường dẫn ví dụ bằng giá trị của môi trường.
+Point DNS to the VM's management IPv4 address. Prepare a PEM file containing the leaf certificate and intermediates, a private key with mode `0600`, and a CA bundle to verify the certificate. Replace the example hostname and paths with values from your deployment.
 
 ```bash
 sudo bash tnac rebind --admin-domain tnac.example.net \
@@ -37,4 +39,4 @@ sudo bash tnac rebind --admin-domain tnac.example.net \
 sudo bash tnac status
 ```
 
-Mở `https://tnac.example.net:8443/` sau khi trạng thái ổn định.
+Once the services are ready, open `https://tnac.example.net:8443/`.

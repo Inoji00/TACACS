@@ -1,10 +1,12 @@
 # TNAC+
 
-TNAC+ là máy chủ TACACS+ để quản trị thiết bị mạng. Web console quản lý thiết bị, identity group, ánh xạ quyền EXEC, command policy và nhật ký AAA. Khả năng thực tế phụ thuộc vào TACACS+ client, cấu hình và firmware của thiết bị.
+**English** · [Tiếng Việt](README.vi.md)
 
-## Cài mới trên Ubuntu
+TNAC+ is a TACACS+ server for network device administration. Its web console manages devices, identity groups, EXEC access mappings, command policies, and AAA logs. Available capabilities depend on the device's TACACS+ client, configuration, and firmware.
 
-Cần Ubuntu amd64, Python 3.12 trở lên có venv, Docker Engine, Buildx, Compose v2 và IPv4 quản trị. VM cần Internet để tải image nền và dependency.
+## Fresh installation on Ubuntu
+
+Use an amd64 Ubuntu VM with Python 3.12 or later and venv, Docker Engine, Buildx, Compose v2, and a management IPv4 address. The VM needs Internet access to fetch base images and dependencies.
 
 ```bash
 git clone https://github.com/Inoji00/TNAC-.git 'TNAC+'
@@ -13,8 +15,8 @@ sudo bash install.sh
 sudo bash tnac status
 ```
 
-Khi được hỏi subnet, nhập CIDR chứa IPv4 của VM. Mở URL HTTPS trình cài hiển thị. Chạy `sudo bash tnac credentials` trong terminal riêng để lấy tài khoản khởi tạo và đổi mật khẩu sau khi đăng nhập.
+When prompted, enter the CIDR containing the VM's IPv4 address. Open the HTTPS URL shown by the installer. Run `sudo bash tnac credentials` in a private terminal to retrieve the initial credentials, then change the password after signing in.
 
-- [Cài đặt và xác minh HTTPS](INSTALL.md)
-- [CLI vận hành và xử lý sự cố](OPERATIONS.md)
-- [Kiểm soát bảo mật, bản vá CVE và phạm vi kiểm thử](SECURITY.md)
+- [Installation and HTTPS verification](INSTALL.md)
+- [Operations CLI and troubleshooting](OPERATIONS.md)
+- [Security controls, CVE patch status, and test coverage](SECURITY.md)

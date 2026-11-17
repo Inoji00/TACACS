@@ -1,22 +1,24 @@
-# Bảo mật TNAC+
+# TNAC+ security
 
-## Kiểm soát hiện có
+**English** · [Tiếng Việt](SECURITY.vi.md)
 
-- Web Admin dùng TLS 1.3, cookie `Secure`, `HttpOnly`, `SameSite=Strict`, kiểm tra Origin và CSRF, và giới hạn lượt đăng nhập. Bản cài mới bắt đầu bằng tài khoản và mật khẩu khởi tạo được sinh riêng.
-- Web Admin và TACACS+ dùng role PostgreSQL riêng. File bí mật được tạo trong volume khi cài. Các container ứng dụng giảm Linux capabilities và mount file cấu hình, bí mật ở chế độ chỉ đọc khi phục vụ.
-- PostgreSQL TCP/5432 dùng nội bộ. HTTPS/8443 và TACACS+/49 bind vào IPv4 đã chọn. Giới hạn truy cập hai cổng từ mạng quản trị và IP thiết bị tương ứng.
-- TCP/49 dùng TACACS+ legacy. Cơ chế obfuscation của giao thức thiếu bảo vệ toàn vẹn và bí mật hiện đại. Triển khai trên mạng quản trị được bảo vệ. [RFC 8907 §10](https://www.rfc-editor.org/rfc/rfc8907.html#section-10)
+## Security controls
 
-## Trạng thái bản vá
+- Web Admin uses TLS 1.3, `Secure` and `HttpOnly` cookies with `SameSite=Strict`, Origin and CSRF checks, and login rate limiting. Each fresh installation generates its own initial credentials.
+- Web Admin and TACACS+ use separate PostgreSQL roles. Installation generates secrets in Docker volumes. The application containers drop Linux capabilities and mount configuration and secret files read-only while serving traffic.
+- PostgreSQL TCP/5432 stays internal. HTTPS/8443 and TACACS+/49 bind to the selected IPv4 address. Restrict these ports to management networks and device source IPs, respectively.
+- TCP/49 uses legacy TACACS+. Its obfuscation lacks modern confidentiality and integrity protection. Run it on a protected management network. [RFC 8907 §10](https://www.rfc-editor.org/rfc/rfc8907.html#section-10)
 
-| Thành phần | Thay đổi trong source | Kết quả kiểm thử image ứng viên |
+## Patch status
+
+| Component | Change in source | Candidate image test results |
 | --- | --- | --- |
-| Python và OS | Chuyển image TNAC+ sang Python 3.12 trên Debian Trixie. | Image TNAC+ r2 có 0 Critical và 47 High trong lần quét ứng viên. |
-| `zlib1g` | Build nâng gói lên bản vá Debian hoặc mới hơn và kiểm tra phiên bản tối thiểu. | Trivy không còn phát hiện CVE-2026-85091 trên image TNAC+ r2. [Debian Security Tracker](https://security-tracker.debian.org/tracker/CVE-2026-85091) |
-| PostgreSQL và `gosu` | Chuyển PostgreSQL lên 16.16 trên Alpine 3.23. Base image được chốt theo digest. Entrypoint chuyển quyền sang UID 70 qua `su-exec`. | Trivy vẫn báo 1 Critical và 25 High ở đường dẫn `gosu` khi quét image theo layer. Quét filesystem xuất từ image ghi nhận 0 Critical và 0 High sau khi xác nhận đích symlink là `su-exec`. [Go advisory](https://pkg.go.dev/vuln/GO-2026-4337) |
+| Python and OS | Move the TNAC+ image to Python 3.12 on Debian Trixie. | Trivy reported 0 Critical and 47 High findings on the TNAC+ r2 candidate. |
+| `zlib1g` | Upgrade to the Debian patched version or newer during build and enforce the minimum version. | Trivy no longer detected CVE-2026-85091 on the TNAC+ r2 candidate. [Debian Security Tracker](https://security-tracker.debian.org/tracker/CVE-2026-85091) |
+| PostgreSQL and `gosu` | Upgrade to PostgreSQL 16.16 on Alpine 3.23, pin the base image digest, and drop to UID 70 through `su-exec` at startup. | Image-layer scanning still reported 1 Critical and 25 High findings at the old `gosu` path. A scan of the exported filesystem reported 0 Critical and 0 High after verifying that the symlink resolves to `su-exec`. [Go advisory](https://pkg.go.dev/vuln/GO-2026-4337) |
 
-## Phạm vi kiểm thử và phần còn mở
+## Test coverage and open items
 
-Hai image ứng viên đã qua initdb, restart và dump/restore PostgreSQL, khởi tạo migrations, kiểm tra TCP/49 readiness, HTTPS trực tiếp tới Web Admin, đăng nhập, đăng xuất và thu hồi cookie cũ. AAA trên switch thật và đường HTTPS qua proxy chưa được nghiệm thu trong đợt này.
+The candidate images passed PostgreSQL initialization, restart, and dump/restore checks, schema migrations, TCP/49 readiness, and direct HTTPS access to Web Admin. Login, logout, and rejection of the revoked session cookie were verified. AAA on physical switches and HTTPS through the proxy remain unverified for these candidates.
 
-Các số trên thuộc về image ứng viên. Source online có thể lấy base Python và dependency khác ở lần build tiếp theo. Cần quét đúng image ID của mỗi bản build dùng để triển khai và ghi nhận các phát hiện còn lại. Báo cáo CVE có thể chứa tên image và thông tin môi trường. Khi báo lỗi, gửi riêng bản đã loại thông tin nhạy cảm cho maintainer.
+The scan counts above apply to the candidate images. A fresh online build can resolve newer Python base layers and dependencies. Scan the exact image IDs that you deploy and record remaining findings. CVE reports can include image names and environment details. Share a redacted report privately with the maintainer.
