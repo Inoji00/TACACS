@@ -51,8 +51,8 @@ def image_for(project):
 def local_config(config,project):
     """Keep public ports on host loopback and all service secrets separated."""
     config.pop('name',None);config.pop('secrets',None)
-    keys=('config','runtime','provision','dbsecret','admin')
-    config['volumes']={key:{'name':project+'-'+key} for key in keys}|{'postgres-data':{}}
+    keys=('config','runtime','provision','dbsecret','admin','alerts')
+    config['volumes']={key:{'name':project+'-'+key,'external':True} for key in keys}|{'postgres-data':{}}
     config['networks']={'private':{'external':True,'name':project+'-private'},
                         'local':{'external':True,'name':project+'-local'}}
     services=config['services']
@@ -70,7 +70,7 @@ def local_config(config,project):
     services['postgres']['healthcheck']['test']=['CMD','pg_isready','-h','127.0.0.1','-U','tacacs_app','-d','tacacs']
     services['admin']['network_mode']='service:postgres'
     services['admin'].pop('networks',None)
-    services['admin']['volumes']=['config:/etc/tacacs:ro','admin:/run/admin-secrets:ro']
+    services['admin']['volumes']=['config:/etc/tacacs:ro','admin:/run/admin-secrets:ro','alerts:/run/tnac-alerts']
     services['proxy']=dict(image=image_for(project),user='10001:10001',network_mode='service:postgres',
         command=['python','-m','tacacs_appliance.loopback_proxy','--bind-name','local-console'],
         depends_on={'admin':{'condition':'service_healthy'}},read_only=True,cap_drop=['ALL'],
@@ -150,7 +150,7 @@ def prepare_files(tenant,gateway,*,password_only=False,admin_ip=None):
 
 SEED="""import base64,json,os,pathlib,sys
 data=json.load(sys.stdin)
-for root in ('config','runtime','provision','dbsecret','admin'):
+for root in ('config','runtime','provision','dbsecret','admin','alerts'):
  p=pathlib.Path('/'+root)
  if any(p.iterdir()):raise ValueError('existing volume contents forbidden')
  p.chmod(0o700)
@@ -159,7 +159,7 @@ for name,(value,uid,mode) in data.items():
  if p.parent.name not in ('config','runtime','provision','dbsecret','admin'):raise ValueError('invalid target')
  with p.open('xb') as stream:stream.write(base64.b64decode(value,validate=True))
  p.chmod(mode);os.chown(p,uid,uid)
-for root in ('config','runtime','admin'):os.chown('/'+root,10001,10001)
+for root in ('config','runtime','admin','alerts'):os.chown('/'+root,10001,10001)
 os.chown('/dbsecret',70,70)
 """
 
@@ -204,7 +204,7 @@ def initialize(directory,*,vm_server_ip=None,vm_client_ip=None,vm_admin_ip=None,
         tenant,bootstrap_device,
         password_only=password_only,admin_ip=vm_admin_ip)
     with (directory/'localhost-ca.pem').open('xb') as stream:stream.write(certificate)
-    keys=('config','runtime','provision','dbsecret','admin')
+    keys=('config','runtime','provision','dbsecret','admin','alerts')
     for name in keys:run(['docker','volume','create',project+'-'+name])
     run(['docker','run','--rm','-i','--network','none','--user','0:0','--cap-drop','ALL',
         '--cap-add','CHOWN','--security-opt','no-new-privileges',

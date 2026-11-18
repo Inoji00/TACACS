@@ -65,4 +65,57 @@ Trong **Users**, chọn **Unlock** cho tài khoản đang bị khóa và xác nh
 
 ## Tương thích cơ sở dữ liệu
 
-Cơ sở dữ liệu đang sử dụng cần áp dụng migration 037 trước khi khởi động v1.0. Sao lưu PostgreSQL và giữ image dịch vụ cũ trước khi lên lịch migration. Quy trình cài mới tạo một bản triển khai mới.
+v1.1.0 giữ 37 migration của bản v1.0 đã phát hành. Xem UPGRADE.vi.md để nâng cấp bản đang chạy. Sao lưu PostgreSQL và giữ image dịch vụ cũ trước khi nâng cấp.
+
+
+## Khóa tài khoản đăng nhập thiết bị
+
+Xác thực mật khẩu TACACS+ khóa tài khoản ngay lần sai liên tiếp thứ 4. Bộ đếm thuộc tài khoản và được lưu xuyên các kết nối SSH và thiết bị trong tenant. Xác thực mật khẩu thành công đặt lại bộ đếm. Tài khoản bị khóa cũng bị từ chối đăng nhập Web. Quản trị viên có quyền có thể mở khóa trong Users. Khi nghiệm thu switch, kiểm tra bốn lần nhập sai được gửi đến TNAC+ và trạng thái Locked.
+
+
+## Cảnh báo Slack
+
+Mở System Administration → Alerts bằng tài khoản có quyền users.manage. Tạo Slack App, bật Incoming Webhooks, chọn kênh nhận rồi nhập webhook trực tiếp vào TNAC+. Lưu trước khi bấm Send test alert. Tin thử được xếp hàng và thường gửi trong vài giây khi tiến trình hoạt động nhanh đã bật. Bấm Refresh để xem trạng thái gửi.
+
+Webhook là bí mật trong volume alerts riêng. File có quyền 0600, thư mục 0700 và thuộc UID 10001 của Web Admin. API đọc cấu hình không trả webhook. Giữ URL khỏi chat, ảnh chụp, Git và dòng lệnh. Ubuntu cần DNS và HTTPS đi ra hooks.slack.com. Không cần mở thêm cổng vào.
+
+Ngưỡng mặc định gồm hai lần kiểm tra dịch vụ/kết nối lỗi liên tiếp, CPU hoặc RAM từ 90%, filesystem chứa Docker từ 85% liên tục 300 giây, và 10 sự kiện xác thực TACACS+ thất bại trong 5 phút. Có thể bật riêng từng nhóm cảnh báo. Nhắc lại mặc định sau 1800 giây. Readiness và nghiệm thu AAA trên switch là hai phép kiểm tra riêng.
+
+Cảnh báo tài khoản so sánh các lần đọc database, tối đa 512 tài khoản đang khóa. Lần đọc đầu đặt mốc ban đầu. Tin khóa/mở khóa có tên user. Tài khoản mất khỏi danh sách được báo là hết khóa hoặc bị xóa. Thay đổi ngắn giữa các lần lấy mẫu có thể bị bỏ qua. Xác thực thất bại được tính tổng sự kiện của bản cài.
+
+Timer Ubuntu gửi Slack độc lập với tình trạng container ứng dụng. Để đọc dữ liệu tài khoản cần Web Admin và PostgreSQL hoạt động. Trang Alerts báo khi dữ liệu tài khoản chưa đọc được hoặc monitor lâu chưa kiểm tra. VM tắt, timer ngừng hoặc mất mạng đi ra cần một máy giám sát bên ngoài.
+
+Lưu cấu hình đặt lại mốc theo dõi và hàng đợi ở chu kỳ tiếp theo. Hàng đợi bền vững giữ tối đa 100 thông báo đã gom nhóm, thử lại khi lỗi mạng, tuân thủ giới hạn Slack và tự báo phục hồi. Nếu Slack nhận tin nhưng phản hồi bị timeout, lần thử lại có thể tạo tin trùng. Cấu hình còn sau khi tạo lại container Web và nằm ngoài PostgreSQL. Đưa volume alerts vào bản sao lưu được bảo vệ.
+
+~~~bash
+systemctl status tnac-snapshot.timer --no-pager
+sudo journalctl -u tnac-snapshot.service -n 30 --no-pager
+sudo bash tnac enable-monitoring
+~~~
+
+Bật lại monitoring sau khi cập nhật source giám sát host. Hướng dẫn tạo webhook tại https://docs.slack.dev/messaging/sending-messages-using-incoming-webhooks/ .
+
+
+### Chuyển tiếp hoạt động user được ghi nhận
+
+Trang Alerts có thêm bốn lựa chọn gồm Xác thực thiết bị thành công, Lệnh thiết bị được ghi nhận, Hoạt động AAA khác được ghi nhận và Thao tác Web có nhật ký audit. Chủ động tick các nhóm cần gửi. Sau khi lưu, chờ một lần monitor mới để đặt mốc ban đầu rồi tạo hoạt động thử.
+
+Authentication PASS là kết quả xác thực thiết bị. EXEC và command authorization là trao đổi riêng. Muốn thấy lệnh, thiết bị phải gửi command accounting. Sự kiện start và stop của cùng lệnh là các bản ghi riêng. Bản cập nhật gắn ID accounting chính xác vào audit mới trong cùng giao dịch. Giữ lịch sử cũ, không đoán liên kết từ session ID hoặc thời gian cho các bản ghi thiếu ID này.
+
+Chỉ chuyển tiếp sự kiện đã lưu. Tính năng không thấy phím gõ, nội dung màn hình, mọi lượt click Web hoặc hoạt động local trên switch không được gửi qua AAA. Web gửi các sự kiện đăng nhập/đăng xuất và quản trị có audit. Lệnh dùng lại cơ chế redaction hiện có. Heuristic này không nhận diện được mọi cú pháp secret của mọi hãng.
+
+Tin được gom nhóm, thường tối đa tám sự kiện đang chờ mỗi chu kỳ. Con trỏ audit chỉ đi tiếp khi sự kiện đã vào hàng đợi. Khi đầy hàng đợi hoặc Slack lỗi, phần còn lại chờ trong PostgreSQL để đọc tiếp. Hệ thống nhiều sự kiện có thể tồn backlog và được báo trên trang Alerts. Lưu cấu hình đặt lại mốc ban đầu và hàng đợi. Mỗi tin có số sequence để đối chiếu audit.
+
+Cập nhật tính năng cần khởi động lại AAA và Web để áp dụng metadata accounting trong giao dịch. Không cần migration database. Test bằng tài khoản thử, lệnh vô hại như show clock trên thiết bị phù hợp và đăng xuất/đăng nhập Web. Kiểm tra log tương ứng đã được lưu trước khi chờ tin Slack.
+
+
+### Gửi hoạt động gần realtime
+
+Worker trên host tnac-alerts.service đọc hoạt động user mỗi 3 giây. Kết quả đăng nhập, lệnh và thao tác Web có audit thường đến Slack trong khoảng 3–5 giây khi mạng và hàng đợi bình thường. Đây là mục tiêu, độ trễ có thể tăng do Slack giới hạn, tồn hàng đợi hoặc lỗi mạng. Khóa/mở khóa tài khoản cũng dùng worker 3 giây và được ưu tiên trước các tin hoạt động thường trong hàng đợi. Snapshot sức khỏe, ngưỡng tài nguyên và tổng số lần xác thực thất bại vẫn kiểm tra khoảng một phút.
+
+Worker dùng con trỏ bền vững và hàng đợi có khóa. Luồng nhanh giữ nguyên trạng thái cảnh báo của luồng snapshot. Xem Last activity check trên Alerts để xác nhận tiến trình đọc nhanh. Khi gỡ bản cài, tắt cả tnac-alerts.service và tnac-snapshot.timer.
+
+~~~bash
+systemctl status tnac-alerts.service --no-pager
+sudo journalctl -u tnac-alerts.service -n 20 --no-pager
+~~~

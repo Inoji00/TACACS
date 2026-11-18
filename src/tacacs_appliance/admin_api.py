@@ -32,7 +32,7 @@ def lan_admin_origin(address, domain=None):
 
 
 class AdminApi:
-    def __init__(self, sessions, permissions, csrf_key: bytes, origin: str, *, login=None, policies=None,audit=None,simulation=None,password_only=False,password_change=None,inventory=None,identities=None,devices=None,device_audit=None,accounting=None,deployment=None,lan_ip=None,dashboard=None,logs=None,device_operator=None,lan_domain=None,web_audit=None):
+    def __init__(self, sessions, permissions, csrf_key: bytes, origin: str, *, login=None, policies=None,audit=None,simulation=None,password_only=False,password_change=None,inventory=None,identities=None,devices=None,device_audit=None,accounting=None,deployment=None,lan_ip=None,dashboard=None,logs=None,device_operator=None,lan_domain=None,web_audit=None,alerts=None):
         from urllib.parse import urlsplit
         url = urlsplit(origin)
         if (url.scheme != "https" or not url.hostname or url.username or url.password
@@ -60,6 +60,7 @@ class AdminApi:
         self._accounting,self._deployment=accounting,deployment
         self._dashboard=dashboard
         self._logs=logs
+        self._alerts=alerts
         self._identities=identities
         self._device_write_limiter=SourceRateLimiter(5,1/60,idle_seconds=600)
         self._password_limiter=SourceRateLimiter(3,1/60,idle_seconds=600)
@@ -189,6 +190,42 @@ class AdminApi:
                     if session["device_operator"]:
                         session["device_aaa_logs"] = self._permissions(user_id, "devices.aaa.read")
                 return respond("200 OK", session)
+            if path in ('/api/alerts', '/api/alerts/test') and self._alerts is not None:
+                if not self._permissions(user_id, 'users.manage'):
+                    return respond('403 Forbidden', {'error': 'permission denied'})
+                if environ.get('QUERY_STRING', ''):
+                    return respond('400 Bad Request', {'error': 'unexpected query'})
+                if path == '/api/alerts' and method == 'GET':
+                    return respond('200 OK', self._alerts.public())
+                if method != 'POST':
+                    return respond('405 Method Not Allowed', {'error': 'method not allowed'})
+                try:
+                    length = int(environ.get('CONTENT_LENGTH', ''))
+                    if environ.get('CONTENT_TYPE') != 'application/json' or not 1 <= length <= 4096:
+                        raise ValueError('invalid body')
+                    raw = environ['wsgi.input'].read(length)
+                    if len(raw) != length:
+                        raise ValueError('incomplete body')
+                    def alert_fields(pairs):
+                        fields = {}
+                        for key, value in pairs:
+                            if key in fields:
+                                raise ValueError('duplicate alert field')
+                            fields[key] = value
+                        return fields
+                    values = json.loads(raw, object_pairs_hook=alert_fields)
+                    if path == '/api/alerts/test' and values != {}:
+                        raise ValueError('invalid test request')
+                    if self._web_audit is None:
+                        raise RuntimeError('alert audit unavailable')
+                    self._web_audit(actor=user_id, source='admin-alerts',
+                                    action='slack.alerts.test' if path.endswith('/test') else 'slack.alerts.configure',
+                                    target='slack', result='requested', security_context={})
+                    if path.endswith('/test'):
+                        return respond('202 Accepted', self._alerts.request_test())
+                    return respond('200 OK', self._alerts.save(values))
+                except (ValueError, TypeError, KeyError, UnicodeError):
+                    return respond('400 Bad Request', {'error': 'invalid alert settings or test cooldown'})
             if path=='/api/inventory' and method=='GET' and self._inventory is not None:
                 if not self._permissions(user_id,'console.read'):return respond('403 Forbidden',{'error':'permission denied'})
                 if environ.get('QUERY_STRING',''):return respond('400 Bad Request',{'error':'unexpected query'})

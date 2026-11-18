@@ -110,7 +110,7 @@ def build_listener(config: RuntimeConfig, pool, *, metrics=None):
         raise ValueError("device inventory required")
     load_active_policy(pool, config.tenant_id)  # Validate initial persisted policy before binding.
     router = TacacsRouter(
-        TacacsAuthenticationHandler(secrets, AuthenticationService(PostgresLocalProvider(pool, config.tenant_id))),
+        TacacsAuthenticationHandler(secrets, AuthenticationService(PostgresLocalProvider(pool, config.tenant_id, lockout_after=4))),
         TacacsAuthorizationHandler(secrets, service=PostgresAuthorizationService(pool, config.tenant_id,config.shell_grants)),
         TacacsAccountingHandler(secrets, PostgresAccountingStore(pool, config.tenant_id), config.tenant_id))
     from .aaa_events import AaaEvents, ObservedRouter

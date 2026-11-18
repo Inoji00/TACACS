@@ -62,6 +62,7 @@ def build_admin_api(pool, *, tenant_id: str, origin: str, csrf_key_file: Path,
     from .deployment_status import DeploymentStatus
     from .admin_dashboard import AdminDashboard
     from .admin_logs import AdminLogs
+    from .alert_storage import AlertStorage
     devices=None
     if device_registry_key_file is not None:
         from .device_registry import DeviceRegistry
@@ -71,4 +72,4 @@ def build_admin_api(pool, *, tenant_id: str, origin: str, csrf_key_file: Path,
                     password_change=AdminPasswordChange(pool,tenant,audit.append_in_transaction),inventory=AdminInventory(pool,tenant),
                     identities=AdminIdentities(pool,tenant,audit.append_in_transaction),devices=devices,device_audit=audit.append_in_transaction,
                     accounting=AdminAccounting(pool,tenant),deployment=DeploymentStatus(),lan_ip=lan_ip,lan_domain=lan_domain,dashboard=AdminDashboard(pool,tenant),logs=AdminLogs(pool,tenant),
-                    device_operator=permissions.device_operator,web_audit=audit.append)
+                    device_operator=permissions.device_operator,web_audit=audit.append,alerts=AlertStorage())

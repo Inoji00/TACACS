@@ -20,7 +20,7 @@ If Docker Engine or its plugins are missing, follow the [Docker Engine installat
 ## Download and install
 
 ```bash
-git clone https://github.com/Inoji00/TACAS.git 'TNAC+'
+git clone --branch v1.1.0 https://github.com/Inoji00/TACACS.git 'TNAC+'
 cd 'TNAC+'
 sudo bash install.sh
 ```
@@ -28,7 +28,7 @@ sudo bash install.sh
 If you have the installer ZIP and its checksum, use:
 
 ```bash
-sha256sum -c TNAC-online-install.zip.sha256 && unzip TNAC-online-install.zip
+sha256sum -c TNAC-v1.1.0.zip.sha256 && unzip TNAC-v1.1.0.zip
 cd 'TNAC+'
 sudo bash install.sh
 ```

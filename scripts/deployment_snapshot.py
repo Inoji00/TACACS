@@ -170,3 +170,4 @@ os.replace(temporary,target)
         '--cap-drop','ALL','--security-opt','no-new-privileges',
         '--mount','type=volume,source='+item['project']+'-config,target=/etc/tacacs',
         local.image_for(item['project']),'python','-c',code],input=json.dumps(data))
+    return data

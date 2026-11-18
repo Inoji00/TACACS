@@ -1118,3 +1118,55 @@ main.login-page #login-panel form > button:hover { background: #9fe5fa; }
   .dash-auth-avatar { display: none; }
   .dash-auth-metrics > div { padding-inline: 6px; }
 }
+
+/* Inventory destination hints, available on hover and keyboard focus. */
+.dashboard-console .dash-inventory button[data-inventory-tip] { position: relative; cursor: pointer; }
+.dashboard-console .dash-inventory button[data-inventory-tip]:is(:hover, :focus-visible)::after {
+  content: attr(data-inventory-tip);
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  width: max-content;
+  max-width: 220px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--dash-ink, #17324d);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 400;
+  text-align: left;
+  white-space: normal;
+  pointer-events: none;
+}
+
+.aaa-dashboard .dash-main-grid > :is(.dash-host, .dash-resource-panel) {
+  display: flex;
+  flex-direction: column;
+}
+
+.aaa-dashboard :is(.dash-host, .dash-resource-panel) > .dash-updated {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 4px;
+  margin: auto 0 0;
+  padding-top: 16px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--dash-muted);
+}
+
+.slack-alerts-panel { max-width: 1100px; }
+.slack-alerts-panel form { display: grid; gap: 20px; }
+.slack-alert-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.slack-alert-fields label { display: grid; align-content: start; gap: 8px; }
+.slack-alert-fields input { width: 100%; min-width: 0; }
+.slack-alert-events { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.slack-alerts-panel .slack-toggle { display: flex; align-items: center; gap: 10px; }
+.slack-alerts-panel .slack-toggle input { width: auto; margin: 0; }
+.slack-alerts-panel fieldset { padding: 16px; }
+.slack-alert-delivery { margin-top: 24px; }
+@media (max-width: 760px) {
+  .slack-alert-fields, .slack-alert-events { grid-template-columns: minmax(0, 1fr); }
+}

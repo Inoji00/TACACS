@@ -65,4 +65,57 @@ In **Users**, select **Unlock** for the locked account and confirm the action. T
 
 ## Schema compatibility
 
-An existing database requires migration 037 before starting the v1.0 runtime. Back up PostgreSQL and keep the previous service images before scheduling the migration. The fresh-install procedure creates a new deployment.
+v1.1.0 uses the same 37 migrations as the published v1.0 release. See UPGRADE.md for the existing-deployment procedure. Back up PostgreSQL and keep the previous service images before upgrading.
+
+
+## Device login lockout
+
+TACACS+ password authentication locks an account on its fourth consecutive wrong password. The counter belongs to the account and persists across SSH connections and devices in the tenant. A successful password authentication resets the counter. Account lockout also prevents Web sign-in for that identity. An authorized administrator can unlock it in Users. Confirm four rejected password attempts and the Locked status on the target switch during acceptance testing.
+
+
+## Slack alerts
+
+Open System Administration → Alerts as an administrator with users.manage. Create a Slack app, enable Incoming Webhooks, authorize the channel, and enter the webhook in TNAC+. Save before selecting Send test alert. Tests are queued and normally sent within a few seconds when the fast activity service is enabled. Refresh to check delivery status.
+
+The webhook is a secret in a dedicated external alerts volume. Files are mode 0600 and its directory is mode 0700, owned by Web Admin UID 10001. GET responses omit the secret. Keep it out of chat, screenshots, Git and shell command lines. The Ubuntu host needs DNS and outbound HTTPS to hooks.slack.com. No additional inbound port is required.
+
+Defaults are two consecutive failed service/endpoint checks, CPU or RAM at least 90% or Docker filesystem usage at least 85% for 300 seconds, and 10 stored failed TACACS+ authentications in five minutes. Event groups can be enabled separately. Reminders default to 1800 seconds. A readiness check does not certify successful switch AAA.
+
+Account alerts compare successive database snapshots, up to 512 locked accounts. The first successful snapshot establishes the baseline. Messages include usernames. A missing account is reported as no longer locked or removed. Brief transitions between samples can be missed. Authentication bursts count aggregate stored failures across this installation.
+
+The host timer sends Slack messages independently of application container health. Web Admin and PostgreSQL must be available for account facts. Alerts shows stale monitor checks and unavailable account data. A powered-off VM, stopped timer, or loss of outbound network requires an external monitor.
+
+Saving settings resets baselines and pending messages on the next cycle. A durable queue holds 100 grouped notifications, retries failures, respects Slack rate limits and sends recovery messages. A timeout after Slack accepts a message may cause a duplicate. Settings and the queue survive Web container recreation and live outside PostgreSQL. Include the private alerts volume in protected backups.
+
+~~~bash
+systemctl status tnac-snapshot.timer --no-pager
+sudo journalctl -u tnac-snapshot.service -n 30 --no-pager
+sudo bash tnac enable-monitoring
+~~~
+
+Re-enable monitoring after updating host monitoring source. Slack setup documentation is at https://docs.slack.dev/messaging/sending-messages-using-incoming-webhooks/ .
+
+
+### Forward recorded user activity
+
+The Alerts page additionally offers Successful device authentication, Recorded device commands, Other recorded AAA activity, and Audited Web actions. These groups are opt-in. Save, wait for a new monitor check to establish the initial cursor, then generate test activity.
+
+Authentication PASS is the device authentication result. EXEC and command authorization remain separate exchanges. Command text requires command accounting sent by the device. Accounting start and stop notifications are distinct records. The update adds an exact accounting record ID to newly appended audit metadata, in the same transaction. Existing history is preserved. Historical records without this reference are not matched by guessed session IDs or timestamps.
+
+Only stored events are forwarded. This cannot observe terminal keystrokes, command output, all Web clicks, or switch-local activity absent from AAA. Web forwarding includes audited login/logout and management actions. Commands pass through the existing redaction function. Its heuristics cannot identify every possible vendor secret syntax.
+
+Delivery is batched, normally up to eight queued events per monitoring cycle. A durable audit cursor advances only after events have entered the queue, so a full queue or Slack outage leaves remaining events in PostgreSQL for later reading. A busy system can accumulate backlog, shown in Alerts. Changing settings resets the baseline and pending alerts. Messages include the audit sequence for correlation.
+
+Updating this feature restarts AAA and Web services to activate transactional accounting metadata. No database migration is required. Test using a disposable device account, a harmless command such as show clock on a compatible device, and a Web logout/login. Verify corresponding stored records before expecting Slack messages.
+
+
+### Fast activity delivery
+
+The tnac-alerts.service host worker polls recorded user activity every three seconds. Login results, commands and audited Web actions normally reach Slack within about 3–5 seconds when the network and queue are healthy. This is a target, not a delivery deadline. Slack throttling, backlog and network failures can extend it. Account lock/unlock transitions use the fast three-second worker. Health snapshots, resource thresholds and aggregate authentication-burst checks keep their one-minute cadence. Lock notifications take priority over queued routine activity.
+
+The worker reuses the durable cursor and locked queue. Concurrent snapshot checks cannot clear active conditions through a missing fast-path observation. Inspect Last activity check in Alerts to verify the fast reader. Stop both tnac-alerts.service and tnac-snapshot.timer when removing a deployment.
+
+~~~bash
+systemctl status tnac-alerts.service --no-pager
+sudo journalctl -u tnac-alerts.service -n 20 --no-pager
+~~~

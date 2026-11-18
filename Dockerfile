@@ -13,7 +13,8 @@ RUN apt-get update \
     && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' zlib1g)" \
        ge '1:1.3.dfsg+really1.3.1-1+deb13u1' \
     && rm -rf /var/lib/apt/lists/*
-RUN useradd --system --uid 10001 --create-home tacacs
+RUN useradd --system --uid 10001 --create-home tacacs \
+    && install -d -o 10001 -g 10001 -m 0700 /run/tnac-alerts
 COPY --from=build /install /usr/local
 COPY --from=build /build/migrations /app/migrations
 USER 10001:10001

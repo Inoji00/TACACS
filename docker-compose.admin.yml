@@ -11,6 +11,7 @@ services:
     volumes:
       - ./config/admin.toml:/etc/tacacs/admin.toml:ro
       - ./admin-secrets:/run/admin-secrets:ro
+      - alerts-data:/run/tnac-alerts
     depends_on:
       postgres: {condition: service_healthy}
     read_only: true
@@ -26,3 +27,5 @@ services:
       interval: 15s
       timeout: 10s
       retries: 3
+volumes:
+  alerts-data: {}

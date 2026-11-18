@@ -20,7 +20,7 @@ Nếu cần cài Docker Engine hoặc plugin, dùng [hướng dẫn Docker Engin
 ## Tải source và cài
 
 ```bash
-git clone https://github.com/Inoji00/TACACS.git 'TNAC+'
+git clone --branch v1.1.0 https://github.com/Inoji00/TACACS.git 'TNAC+'
 cd 'TNAC+'
 sudo bash install.sh
 ```
@@ -28,7 +28,7 @@ sudo bash install.sh
 Với ZIP và checksum được cung cấp cùng nhau, có thể dùng:
 
 ```bash
-sha256sum -c TNAC-online-install.zip.sha256 && unzip TNAC-online-install.zip
+sha256sum -c TNAC-v1.1.0.zip.sha256 && unzip TNAC-v1.1.0.zip
 cd 'TNAC+'
 sudo bash install.sh
 ```
