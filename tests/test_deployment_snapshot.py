@@ -29,6 +29,8 @@ class DeploymentSnapshotTests(unittest.TestCase):
             response = MagicMock()
             response.__enter__.return_value.status = 200
             with patch.object(deployment_snapshot.local, 'run', side_effect=docker), \
+                 patch.object(deployment_snapshot, 'host_metrics', return_value={
+                     'uptime_seconds':60,'cpu_percent':1,'memory_percent':20,'disk_percent':30}), \
                  patch.object(deployment_snapshot.socket, 'create_connection'), \
                  patch.object(deployment_snapshot.ssl, 'create_default_context'), \
                  patch.object(deployment_snapshot, 'urlopen', return_value=response) as probe:

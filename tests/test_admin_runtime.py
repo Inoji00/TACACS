@@ -11,7 +11,7 @@ class AdminRuntimeTests(unittest.TestCase):
     def run_composed(self,*,application_error=False,listener_error=False,cleanup_error=False,unexpected_stop=False,client_ca=None,tls_error=False):
         config=load_config(Path(__file__).resolve().parent/'fixtures/admin.example.toml')
         if client_ca is not None:config['client_ca_file']=client_ca
-        pool=Mock();server=Mock();handlers={}
+        pool=Mock();server=Mock();proxy=Mock();handlers={}
         def signals(number,handler):
             handlers[number]=handler
             return signal.SIG_DFL
@@ -19,11 +19,13 @@ class AdminRuntimeTests(unittest.TestCase):
             if listener_error:raise RuntimeError('sensitive-listener-value')
             if not unexpected_stop:handlers[signal.SIGTERM](signal.SIGTERM,None)
         server.serve_forever.side_effect=serve
+        proxy.serve_forever.side_effect=serve
         if cleanup_error:server.server_close.side_effect=RuntimeError('sensitive-close-value')
         with ExitStack() as stack:
             stack.enter_context(patch('sys.argv',['admin','--config','admin.toml']))
             for name,value in [('load_config',config),
-                               ('read_secret',b'dsn'),('ConnectionPool',pool),('AdminHttpsServer',server)]:
+                               ('read_secret',b'dsn'),('ConnectionPool',pool),('AdminHttpsServer',server),
+                               ('ProxiedAdminHttpsServer',proxy)]:
                 stack.enter_context(patch('tacacs_appliance.admin_runtime.'+name,return_value=value))
             tls=stack.enter_context(patch('tacacs_appliance.admin_runtime.create_admin_tls_context'))
             if tls_error:tls.side_effect=ValueError('sensitive-invalid-ca')
