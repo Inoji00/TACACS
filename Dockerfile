@@ -14,9 +14,9 @@ RUN apk upgrade --no-cache \
     && apk add --no-cache tzdata \
     && addgroup -S -g 10001 tacacs \
     && adduser -S -D -u 10001 -G tacacs -h /home/tacacs tacacs \
-    && mkdir -p /run/tnac-alerts \
-    && chown 10001:10001 /run/tnac-alerts \
-    && chmod 0700 /run/tnac-alerts
+    && mkdir -p /run/tnac-alerts /var/lib/tnac-syslog \
+    && chown 10001:10001 /run/tnac-alerts /var/lib/tnac-syslog \
+    && chmod 0700 /run/tnac-alerts /var/lib/tnac-syslog
 COPY --from=build /install /usr/local
 COPY --from=build /build/migrations /app/migrations
 USER 10001:10001

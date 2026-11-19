@@ -28,7 +28,7 @@ sudo bash install.sh
 If you have the installer ZIP and its checksum, use:
 
 ```bash
-sha256sum -c TNAC-v1.1.1.zip.sha256 && unzip TNAC-v1.1.1.zip
+sha256sum -c TNAC-v1.1.2.zip.sha256 && unzip TNAC-v1.1.2.zip
 cd 'TNAC+'
 sudo bash install.sh
 ```
@@ -47,3 +47,5 @@ Run `credentials` in a private terminal. Use the public CA file at `data/vm-appl
 This installer initializes a fresh deployment. For an existing deployment, run `sudo bash tnac status` to check its state. See [Operations](OPERATIONS.md) for service CLI and installation of a trusted CA certificate for your management domain.
 
 The installer enables a systemd timer to refresh **Services** and **System resources** about once a minute. For an existing deployment, update the source and run `sudo bash tnac enable-monitoring`.
+
+- [Device Syslog deployment and rollback](DEVICE-SYSLOG.md)

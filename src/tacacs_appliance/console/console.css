@@ -1170,3 +1170,41 @@ main.login-page #login-panel form > button:hover { background: #9fe5fa; }
 @media (max-width: 760px) {
   .slack-alert-fields, .slack-alert-events { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Devices connection guide */
+.connection-guide {
+  width: min(46rem, calc(100% - 2rem));
+  max-height: calc(100dvh - 2rem);
+  padding: 0 1rem 1rem;
+  border: 1px solid #ccdbe6;
+  border-radius: .85rem;
+  color: #15334a;
+  background: #fff;
+  overflow: auto;
+}
+.connection-guide::backdrop { background: rgb(15 29 44 / .55); }
+.connection-guide-header {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  padding: .75rem 0;
+  background: inherit;
+}
+.connection-guide-header h2 { margin: 0; }
+.connection-guide-cli pre {
+  padding: .75rem;
+  border-radius: .5rem;
+  background: #edf4f8;
+  overflow: auto;
+}
+.connection-guide-cli .actions { flex-wrap: wrap; }
+
+.device-syslog-filters { flex-wrap: wrap; }
+.device-syslog-table { overflow: auto; }
+.device-syslog-table table { min-width: 40rem; }
+.device-syslog-table td:nth-child(2) { white-space: nowrap; }
+.device-syslog-message { overflow-wrap: anywhere; white-space: pre-wrap; }

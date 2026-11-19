@@ -10,6 +10,20 @@ TOKEN = "a" * 43
 
 
 class AdminApiTests(unittest.TestCase):
+    def test_device_syslog_is_restricted_to_admin_and_validates_filters(self):
+        path = "/api/device-syslog"
+        with patch("tacacs_appliance.device_syslog.search", return_value={"items": []}) as search:
+            self.assertEqual(self.request(PATH_INFO=path, HTTP_COOKIE="")["status"], "401 Unauthorized")
+            self.permissions.return_value = False
+            self.assertEqual(self.request(PATH_INFO=path)["status"], "403 Forbidden")
+            search.assert_not_called()
+            self.permissions.return_value = True
+            self.assertEqual(self.request(PATH_INFO=path, QUERY_STRING="severity=5")["status"], "200 OK")
+            self.permissions.assert_called_with("user-id", "users.manage")
+            search.assert_called_once_with("severity=5")
+            search.side_effect = ValueError("invalid filter")
+            self.assertEqual(self.request(PATH_INFO=path, QUERY_STRING="severity=9")["status"], "400 Bad Request")
+
     def test_removed_tenant_header_rejects_reads_and_writes_before_dispatch(self):
         policies, devices = Mock(), Mock()
         self.app = AdminApi(self.sessions, self.permissions, b'k'*32,

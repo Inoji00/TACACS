@@ -2,6 +2,13 @@
 
 **English** · [Tiếng Việt](CHANGELOG.vi.md)
 
+## v1.1.2 — 2026-11-19
+
+- Add Device Syslog for operational messages over UDP/514, including devices without a TACACS+ registration. Administrators can filter by source IP, receive time, severity and message.
+- Keep logs in a separate volume for 30 days. Prune expired rows in batches and limit each page to 100 entries.
+- Add offline English and Vietnamese Cisco connection guidance with copyable example CLI on the Devices page.
+- Package operational files and documentation in the installer ZIP. The full Git checkout retains tests and workflows.
+
 ## v1.1.1 — 2026-11-19
 
 - Run TNAC on Python 3.12 with Alpine 3.23.

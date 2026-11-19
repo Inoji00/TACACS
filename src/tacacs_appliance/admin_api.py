@@ -190,6 +190,19 @@ class AdminApi:
                     if session["device_operator"]:
                         session["device_aaa_logs"] = self._permissions(user_id, "devices.aaa.read")
                 return respond("200 OK", session)
+            if path == "/api/device-syslog":
+                if not self._permissions(user_id, "users.manage"):
+                    return respond("403 Forbidden", {"error": "permission denied"})
+                if method != "GET":
+                    return respond("405 Method Not Allowed", {"error": "method not allowed"})
+                from .device_syslog import search
+                query = environ.get("QUERY_STRING", "")
+                if len(query) > 2048:
+                    return respond("400 Bad Request", {"error": "invalid syslog filters"})
+                try:
+                    return respond("200 OK", search(query))
+                except (ValueError, OverflowError):
+                    return respond("400 Bad Request", {"error": "invalid syslog filters"})
             if path in ('/api/alerts', '/api/alerts/test') and self._alerts is not None:
                 if not self._permissions(user_id, 'users.manage'):
                     return respond('403 Forbidden', {'error': 'permission denied'})

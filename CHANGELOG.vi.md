@@ -2,6 +2,13 @@
 
 [English](CHANGELOG.md) · **Tiếng Việt**
 
+## v1.1.2 — 19/11/2026
+
+- Thêm Device Syslog để nhận log vận hành UDP/514, kể cả thiết bị chưa đăng ký TACACS+. Admin lọc theo IP nguồn, thời gian nhận, severity và nội dung.
+- Giữ log 30 ngày trong volume riêng. Dọn bản ghi hết hạn theo lô và giới hạn mỗi trang ở 100 dòng.
+- Thêm hướng dẫn kết nối Cisco Anh–Việt trong Devices, đọc offline và sao chép CLI mẫu.
+- ZIP cài đặt chỉ chứa thành phần vận hành và tài liệu. Source clone giữ test và workflow để tái hiện CI.
+
 ## v1.1.1 — 19/11/2026
 
 - Chuyển runtime TNAC sang Python 3.12 trên Alpine 3.23.

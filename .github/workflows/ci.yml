@@ -105,6 +105,9 @@ jobs:
         run: |
           python scripts/test_compose.py --admin --image tnac:ci --postgres-image tnac-postgres:ci \
             2>&1 | tee artifacts/compose.log
+      - name: Syslog UDP and read-only volume smoke test
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: bash scripts/test_device_syslog_image.sh tnac:ci | tee artifacts/device-syslog.log
       - name: Install checksum-verified Trivy
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         id: trivy
@@ -163,7 +166,21 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           archive="TNAC-${RELEASE_TAG}.zip"
-          git archive --format=zip --prefix='TNAC+/' --output="$archive" HEAD
+          git archive --format=zip --prefix='TNAC+/' --output="$archive" HEAD -- \
+            '*.md' LICENSE .dockerignore pyproject.toml Dockerfile Dockerfile.postgres \
+            docker-compose.yml docker-compose.admin.yml docker-compose.initialize.yml \
+            install.sh tnac src migrations \
+            scripts/container_names.py scripts/deployment_snapshot.py scripts/enable_device_syslog.sh \
+            scripts/local_appliance.py scripts/logging_defaults.py scripts/monitoring.py \
+            scripts/prepare_slack_alerts.py scripts/repair_external_volumes.py scripts/slack_monitor.py \
+            scripts/vm_appliance.py scripts/vm_preflight.py
+          unzip -Z1 "$archive" > installer-files.txt
+          grep -Fxq 'TNAC+/install.sh' installer-files.txt
+          grep -Fxq 'TNAC+/scripts/enable_device_syslog.sh' installer-files.txt
+          if grep -Eq '^TNAC\+/([.]git(hub)?/|tests/|artifacts/|data/|secrets/)' installer-files.txt; then
+            echo 'Unexpected file in installer ZIP'
+            exit 1
+          fi
           sha256sum "$archive" > "$archive.sha256"
           for file in CHANGELOG.md CHANGELOG.vi.md; do
             awk -v heading="## $RELEASE_TAG " 'index($0, heading)==1 { printing=1; next } printing && /^## / { exit } printing { print }' "$file" >> release-notes.md

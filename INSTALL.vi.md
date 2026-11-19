@@ -28,7 +28,7 @@ sudo bash install.sh
 Với ZIP và checksum được cung cấp cùng nhau, có thể dùng:
 
 ```bash
-sha256sum -c TNAC-v1.1.1.zip.sha256 && unzip TNAC-v1.1.1.zip
+sha256sum -c TNAC-v1.1.2.zip.sha256 && unzip TNAC-v1.1.2.zip
 cd 'TNAC+'
 sudo bash install.sh
 ```
@@ -47,3 +47,5 @@ Chạy credentials trong terminal riêng. Mở URL HTTPS do trình cài in ra v�
 Bộ cài dành cho khởi tạo mới. Nếu đã có trạng thái triển khai, dùng `sudo bash tnac status` để xác minh stack. Xem [CLI vận hành](OPERATIONS.vi.md) để kiểm tra dịch vụ và cài chứng chỉ CA cho tên miền quản trị.
 
 Bộ cài bật systemd timer để cập nhật **Services** và **System resources** khoảng một phút một lần. Với bản đã cài, cập nhật source rồi chạy `sudo bash tnac enable-monitoring`.
+
+- [Triển khai và rollback Device Syslog](DEVICE-SYSLOG.md)

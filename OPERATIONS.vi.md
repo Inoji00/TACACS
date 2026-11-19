@@ -65,7 +65,7 @@ Trong **Users**, chọn **Unlock** cho tài khoản đang bị khóa và xác nh
 
 ## Tương thích cơ sở dữ liệu
 
-v1.1.1 giữ 37 migration của bản v1.0 đã phát hành. Xem UPGRADE.vi.md để nâng cấp bản đang chạy. Sao lưu PostgreSQL và giữ image dịch vụ cũ trước khi nâng cấp.
+v1.1.2 giữ 37 migration của bản v1.0 đã phát hành. Xem UPGRADE.vi.md để nâng cấp bản đang chạy. Sao lưu PostgreSQL và giữ image dịch vụ cũ trước khi nâng cấp.
 
 
 ## Khóa tài khoản đăng nhập thiết bị
@@ -119,3 +119,5 @@ Worker dùng con trỏ bền vững và hàng đợi có khóa. Luồng nhanh gi
 systemctl status tnac-alerts.service --no-pager
 sudo journalctl -u tnac-alerts.service -n 20 --no-pager
 ~~~
+
+- [Triển khai và rollback Device Syslog](DEVICE-SYSLOG.md)

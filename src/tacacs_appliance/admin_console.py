@@ -7,13 +7,15 @@ class AdminConsole:
     def __init__(self,api):
         self.api=api
         root=files('tacacs_appliance').joinpath('console')
-        self.versions={name:hashlib.sha256(root.joinpath(name).read_bytes()).hexdigest() for name in ('console.js','console.css')}
+        self.versions={name:hashlib.sha256(root.joinpath(name).read_bytes()).hexdigest() for name in ('console.js','console.css','connection-guide.js','device-syslog.js')}
 
     def __call__(self,environment,start_response):
         path=environment.get('PATH_INFO','')
         assets={'/':('index.html','text/html; charset=utf-8'),
                 '/console.css':('console.css','text/css; charset=utf-8'),
                 '/console.js':('console.js','text/javascript; charset=utf-8'),
+                '/device-syslog.js':('device-syslog.js','text/javascript; charset=utf-8'),
+                '/connection-guide.js':('connection-guide.js','text/javascript; charset=utf-8'),
                 '/login-tnac.svg':('login-tnac.svg','image/svg+xml')}
         if path not in assets:return self.api(environment,start_response)
         if environment.get('wsgi.url_scheme')!='https':

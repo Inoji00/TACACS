@@ -65,7 +65,7 @@ In **Users**, select **Unlock** for the locked account and confirm the action. T
 
 ## Schema compatibility
 
-v1.1.1 uses the same 37 migrations as the published v1.0 release. See UPGRADE.md for the existing-deployment procedure. Back up PostgreSQL and keep the previous service images before upgrading.
+v1.1.2 uses the same 37 migrations as the published v1.0 release. See UPGRADE.md for the existing-deployment procedure. Back up PostgreSQL and keep the previous service images before upgrading.
 
 
 ## Device login lockout
@@ -119,3 +119,5 @@ The worker reuses the durable cursor and locked queue. Concurrent snapshot check
 systemctl status tnac-alerts.service --no-pager
 sudo journalctl -u tnac-alerts.service -n 20 --no-pager
 ~~~
+
+- [Device Syslog deployment and rollback](DEVICE-SYSLOG.md)

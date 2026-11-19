@@ -22,7 +22,7 @@ class AdminConsoleTests(unittest.TestCase):
         api.assert_not_called()
 
     def test_bundled_assets_are_served_with_correct_types(self):
-        for path,kind in (('/console.js','text/javascript'),('/console.css','text/css'),('/login-tnac.svg','image/svg+xml')):
+        for path,kind in (('/console.js','text/javascript'),('/connection-guide.js','text/javascript'),('/device-syslog.js','text/javascript'),('/console.css','text/css'),('/login-tnac.svg','image/svg+xml')):
             body,start,api=self.request(path)
             self.assertTrue(body)
             self.assertTrue(dict(start.call_args.args[1])['Content-Type'].startswith(kind))
@@ -34,6 +34,9 @@ class AdminConsoleTests(unittest.TestCase):
         html,start,_=self.request('/')
         digest=hashlib.sha256(script).hexdigest()[:16]
         self.assertIn(('/console.js?v='+digest).encode(),html)
+        guide,_,_=self.request('/connection-guide.js')
+        guide_url=('/connection-guide.js?v='+hashlib.sha256(guide).hexdigest()[:16]).encode()
+        self.assertLess(html.index(guide_url),html.index(('/console.js?v='+digest).encode()))
         self.assertNotIn(b'v=workspace1',html)
         self.assertEqual(dict(start.call_args.args[1])['X-Console-Build'],digest)
 
