@@ -555,7 +555,7 @@ class PostgresIntegrationTests(unittest.TestCase):
             from tacacs_appliance.admin_logs import AdminLogs
             from tacacs_appliance.admin_accounting import AdminAccounting
 
-            logs, accounting = AdminLogs(pool, tenant), AdminAccounting(pool, tenant)
+            logs, accounting = AdminLogs(pool, str(tenant)), AdminAccounting(pool, str(tenant))
             with self.assertRaises(PermissionError):
                 logs.read(operator, kind='aaa')
             with self.assertRaises(PermissionError):
