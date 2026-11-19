@@ -2,6 +2,10 @@
 
 **English** · [Tiếng Việt](CHANGELOG.vi.md)
 
+## Unreleased
+
+- Export retained Device Syslog into daily text files by source IPv4 and UTC+07 receive date. Use a short collector name and preserve the full Compose status table. Fresh installs use the `tnac-syslog` volume; upgrades retain existing logs.
+
 ## v1.1.2 — 2026-11-19
 
 - Add Device Syslog for operational messages over UDP/514, including devices without a TACACS+ registration. Administrators can filter by source IP, receive time, severity and message.

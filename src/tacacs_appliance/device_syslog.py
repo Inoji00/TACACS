@@ -7,6 +7,7 @@ from pathlib import Path
 import re
 import socket
 import sqlite3
+from threading import Thread
 import time
 from urllib.parse import parse_qs
 
@@ -110,6 +111,9 @@ def collect(port):
         listener.bind(("0.0.0.0", port))
         listener.settimeout(0.25)
         db = writer(DATABASE)
+        from .syslog_archive import run
+        Thread(target=run, args=(DATABASE, RETENTION_SECONDS),
+               name="device-syslog-archive", daemon=True).start()
         pending = []
         maintenance = 0
         flush = time.monotonic() + 0.25

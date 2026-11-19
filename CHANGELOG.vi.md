@@ -2,6 +2,10 @@
 
 [English](CHANGELOG.md) · **Tiếng Việt**
 
+## Chưa phát hành
+
+- Xuất Device Syslog còn hạn thành file theo IPv4 nguồn và ngày nhận UTC+07. Dùng tên container ngắn, giữ đủ cột trạng thái Compose. Cài mới dùng volume `tnac-syslog`; nâng cấp giữ log hiện có.
+
 ## v1.1.2 — 19/11/2026
 
 - Thêm Device Syslog để nhận log vận hành UDP/514, kể cả thiết bị chưa đăng ký TACACS+. Admin lọc theo IP nguồn, thời gian nhận, severity và nội dung.

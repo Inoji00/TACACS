@@ -35,6 +35,22 @@ Create a safe non-AAA event on a lab port. In **System Administration → Device
 
 Logs expire after 30 days by receive time. Cleanup runs in batches. An existing database can reuse freed pages, while new stores also use incremental SQLite vacuum. Monitor disk growth during the trial. The UI loads at most 100 events at a time. The collector preserves the received message and reads facility/severity from a valid PRI, including Cisco legacy and RFC 5424 input. It does not extract every structured-data field. Treat logs as sensitive because devices may emit usernames or configuration details. / Log hết hạn sau 30 ngày tính theo lúc nhận. Dọn theo lô. Kho hiện có dùng lại trang trống, kho mới dùng thêm SQLite incremental vacuum. Theo dõi tăng trưởng ổ đĩa trong đợt thử. UI tải tối đa 100 bản ghi mỗi lần. Bộ thu giữ nội dung và đọc facility/severity từ PRI hợp lệ, gồm bản tin Cisco cũ và RFC 5424. Chưa tách hết structured data. Log có thể chứa username hoặc thông tin cấu hình do thiết bị gửi.
 
+## Daily files and status / File theo ngày và trạng thái
+
+The collector also exports retained SQLite events to `/var/lib/tnac-syslog/archive/<SOURCE_IP>/YYYY-MM-DD.log` about once a minute. Days use UTC+07 receive time. It refreshes changed files by streaming rows into a temporary file and replacing the previous copy. This uses additional disk space per retained message. / Bộ thu xuất log còn hạn từ SQLite sang file theo IP và ngày, làm mới khoảng mỗi phút. Ngày tính theo giờ nhận UTC+07. File thay đổi được tạo lại theo luồng rồi thay thế bản cũ. Cần dự trù thêm dung lượng vì log có thêm một bản dạng text.
+
+New deployments use the volume and container name `tnac-syslog`. Existing deployments retain their configured volume and its logs. The status command keeps all default Compose columns. / Bản cài mới dùng tên volume và container `tnac-syslog`. Hệ thống hiện hữu giữ volume và log đang có. Bảng trạng thái giữ đầy đủ cột Compose.
+
+```bash
+cd "$HOME/TNAC+"
+project=$(sudo docker inspect -f '{{index .Config.Labels "com.docker.compose.project"}}' tnac-app)
+sudo docker compose -p "$project" -f data/vm-appliance/compose.json ps
+sudo docker exec tnac-admin find /var/lib/tnac-syslog/archive -maxdepth 2 -type f -name '*.log' | sort
+sudo docker exec tnac-admin grep -F 'CONFIG_I' /var/lib/tnac-syslog/archive/192.0.2.10/2026-11-19.log
+```
+
+Use the IP and date returned by `find`. Verify that old events appear after backfill and a new lab event appears in the corresponding file. / Dùng IP và ngày do `find` in ra. Kiểm tra log cũ đã được xuất và sự kiện lab mới xuất hiện trong file tương ứng.
+
 ## Rollback / Hoàn tác
 
 If removing the new destination, remove only that logging host on the switch. If rolling back the image, keep network settings intact. Restore the printed Compose backup and recreate the Web services. If the backup already defines Device Syslog, also recreate that service with the old image. If the backup predates Device Syslog, stop and remove only the collector container before restoring the backup. Preserve the Syslog volume. / Khi gỡ đích mới, chỉ gỡ logging host tương ứng trên switch. Khi quay lại image cũ, giữ cấu hình mạng. Khôi phục file backup đã in và tạo lại hai dịch vụ Web. Nếu backup đã có Syslog, tạo lại cả service Syslog bằng image cũ. Nếu backup chưa có Syslog, dừng và gỡ riêng container collector trước khi phục hồi. Giữ volume Syslog.
