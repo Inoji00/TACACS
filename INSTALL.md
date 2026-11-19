@@ -17,6 +17,8 @@ ip -br -4 addr
 
 If Docker Engine or its plugins are missing, follow the [Docker Engine installation guide for Ubuntu](https://docs.docker.com/engine/install/ubuntu/). Install `python3-venv`, `git`, `unzip`, and `iproute2` from the Ubuntu package repositories as needed.
 
+Fresh installs start Device Syslog automatically on UDP/514 bound to the selected VM server IPv4. Make sure the port is free and restrict incoming traffic to your management networks. Existing installations can use the manual procedure.
+
 ## Download and install
 
 ```bash

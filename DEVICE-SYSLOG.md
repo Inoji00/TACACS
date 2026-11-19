@@ -4,6 +4,8 @@ TNAC+ receives operational Syslog from infrastructure devices over IPv4 UDP/514,
 
 ## Deploy / Triển khai
 
+Fresh installations from current main enable Device Syslog automatically on the selected VM server IPv4. Use the procedure below for existing installs and the original v1.1.2 installer ZIP. / Bản cài mới từ main hiện tự bật Device Syslog ở IPv4 máy chủ đã chọn. Dùng quy trình bên dưới cho hệ thống đang chạy và ZIP v1.1.2 gốc.
+
 Install TNAC+ first. For an existing installation use a separate source checkout. Take the database/config backups and retain the currently running image IDs before upgrading. This procedure enables or upgrades the Syslog collector and Web Admin. For an upgrade of older TACACS+ or PostgreSQL images, follow the separate upgrade guide first. / Cài TNAC+ trước. Với hệ thống đang chạy, dùng checkout source riêng, sao lưu database/cấu hình và giữ image hiện tại. Quy trình dưới đây cập nhật Web và bộ thu Syslog. Nếu cần nâng image TACACS+ hoặc PostgreSQL đời cũ, thực hiện hướng dẫn nâng cấp riêng trước.
 
 ```bash

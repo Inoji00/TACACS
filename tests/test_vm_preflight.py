@@ -1,3 +1,4 @@
+import socket
 import sys
 from pathlib import Path
 import tempfile
@@ -15,6 +16,23 @@ class SocketFixture:
 
 
 class PreflightTests(unittest.TestCase):
+    def test_occupied_syslog_port_blocks_fresh_install(self):
+        class Occupied(SocketFixture):
+            def bind(self, address):
+                self_test.assertEqual(address, ('192.0.2.10', 514))
+                raise OSError("address already in use")
+
+        self_test = self
+        with tempfile.TemporaryDirectory() as directory, patch.object(vm_preflight.sys, 'platform', 'linux'):
+            report = vm_preflight.check(
+                '192.0.2.10', root=Path(directory), runner=lambda args: '2.39.4',
+                binder=lambda family, kind: Occupied() if kind == socket.SOCK_DGRAM else SocketFixture(),
+                check_images=False,
+            )
+        self.assertFalse(report['host_ready'])
+        checks = {item['check']: item['status'] for item in report['checks']}
+        self.assertEqual(checks['assigned-ip-and-free-ports'], 'FAIL')
+
     def test_fresh_install_without_a_device_does_not_check_switch_route(self):
         def runner(args):
             self.assertEqual(args[0], 'docker')

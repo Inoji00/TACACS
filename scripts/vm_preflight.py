@@ -48,6 +48,8 @@ def check(server, client=None, root=ROOT, runner=run, binder=socket.socket, *, a
         for address, port in ((server, 49), (admin_ip, 8443)):
             with binder(socket.AF_INET, socket.SOCK_STREAM) as endpoint:
                 endpoint.bind((address, port))
+        with binder(socket.AF_INET, socket.SOCK_DGRAM) as endpoint:
+            endpoint.bind((server, 514))
         return True
 
     record('assigned-ip-and-free-ports', bind_ports)

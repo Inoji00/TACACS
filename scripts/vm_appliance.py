@@ -100,7 +100,11 @@ def start_vm(directory,item,server):
     persist(directory)
     profile=json.loads((directory/'vm-profile.json').read_text())
     admin=profile.get('admin_ip')
-    local.run(local.command(directory,item)+['up','-d','--no-build','--wait','--wait-timeout','60','postgres','app','admin','proxy'])
+    services = ['postgres', 'app', 'admin', 'proxy']
+    config = json.loads((directory/'compose.json').read_text(encoding='utf-8'))
+    if 'device-syslog' in config['services']:
+        services.append('device-syslog')
+    local.run(local.command(directory,item)+['up','-d','--no-build','--wait','--wait-timeout','60',*services])
     with socket.create_connection((server,49),timeout=3):pass
     # Validate TLS on the address used by the browser.
     import ssl

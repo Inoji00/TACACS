@@ -17,6 +17,8 @@ ip -br -4 addr
 
 Nếu cần cài Docker Engine hoặc plugin, dùng [hướng dẫn Docker Engine cho Ubuntu](https://docs.docker.com/engine/install/ubuntu/). Cài `python3-venv`, `git`, `unzip` và `iproute2` từ kho Ubuntu nếu VM thiếu các gói này.
 
+Bản cài mới tự bật Device Syslog qua UDP/514 trên IPv4 máy chủ đã chọn. Kiểm tra cổng còn trống và giới hạn nguồn gửi vào trong mạng quản trị. Bản đang chạy có thể dùng quy trình bật thủ công.
+
 ## Tải source và cài
 
 ```bash
