@@ -2,6 +2,8 @@
 
 [English](SECURITY.md) · **Tiếng Việt**
 
+> **[Kiểm chứng bảo mật](SECURITY-VALIDATION.vi.md)** · 66 bài bảo mật local · 512 bài hồi quy CI · 0 Critical / 0 High
+
 ## Kiểm soát hiện có
 
 - Web Admin dùng TLS 1.3, cookie `Secure`, `HttpOnly`, `SameSite=Strict`, kiểm tra Origin và CSRF, và giới hạn lượt đăng nhập. Bản cài mới bắt đầu bằng tài khoản và mật khẩu khởi tạo được sinh riêng.

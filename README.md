@@ -6,6 +6,8 @@ TNAC+ is a TACACS+ server for network device administration. Its web console man
 
 TNAC+ integrates Slack activity and health alerts, fast account-lock notifications, fourth-failure device lockout, and the accepted Dashboard/Users layout. Recorded activity is polled every three seconds; normal Slack delivery targets about 3–5 seconds. Command notifications require device command accounting. See the [changes](CHANGELOG.md) and [upgrade procedure](UPGRADE.md).
 
+> **[Security validation](SECURITY-VALIDATION.md)** · 66 focused security tests · 512 CI regression tests · 0 Critical / 0 High
+
 ## Tests and security checks
 
 [Workflow and artifacts](https://github.com/Inoji00/TACACS/actions/workflows/ci.yml) · [Reproduce tests and Trivy scans](TESTING.md). A default clone tracks `main`. Use the versioned ZIP for a fixed release.

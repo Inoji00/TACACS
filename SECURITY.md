@@ -2,6 +2,8 @@
 
 **English** · [Tiếng Việt](SECURITY.vi.md)
 
+> **[Security validation](SECURITY-VALIDATION.md)** · 66 focused security tests · 512 CI regression tests · 0 Critical / 0 High
+
 ## Security controls
 
 - Web Admin uses TLS 1.3, `Secure` and `HttpOnly` cookies with `SameSite=Strict`, Origin and CSRF checks, and login rate limiting. Each fresh installation generates its own initial credentials.

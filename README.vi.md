@@ -6,6 +6,8 @@ TNAC+ là máy chủ TACACS+ để quản trị thiết bị mạng. Web console
 
 TNAC+ tích hợp cảnh báo hoạt động/sức khỏe qua Slack, báo khóa tài khoản nhanh, khóa thiết bị ở lần sai thứ 4 và bố cục Dashboard/Users đã được chấp nhận. Hoạt động được đọc mỗi 3 giây; mục tiêu gửi Slack khoảng 3–5 giây khi điều kiện bình thường. Muốn nhận lệnh, thiết bị cần gửi command accounting. Xem [thay đổi](CHANGELOG.vi.md) và [quy trình nâng cấp](UPGRADE.vi.md).
 
+> **[Kiểm chứng bảo mật](SECURITY-VALIDATION.vi.md)** · 66 bài bảo mật local · 512 bài hồi quy CI · 0 Critical / 0 High
+
 ## Kiểm thử và bảo mật
 
 [Workflow và artifact](https://github.com/Inoji00/TACACS/actions/workflows/ci.yml) · [CLI chạy lại test và Trivy](TESTING.vi.md). Clone mặc định lấy `main`. Dùng ZIP theo phiên bản khi cần cố định bản cài.
