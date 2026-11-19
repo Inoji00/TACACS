@@ -48,6 +48,27 @@ def exec_probe(command, service, probe):
         stdin=subprocess.DEVNULL,check=True,capture_output=True,timeout=20)
 
 
+def verify_backup_restore(command):
+    prefix = command + ['exec', '-T', 'postgres']
+
+    def execute(*args, input=None):
+        return subprocess.run(prefix + list(args), input=input, capture_output=True,
+                              check=True, timeout=30).stdout
+
+    backup = execute('pg_dump', '-U', 'tacacs_app', '-Fc', 'tacacs')
+    execute('createdb', '-U', 'tacacs_app', 'tnac_restore_check')
+    execute('pg_restore', '-U', 'tacacs_app', '--exit-on-error',
+            '-d', 'tnac_restore_check', input=backup)
+    query = "SELECT name, checksum FROM schema_migrations ORDER BY name"
+    def migrations(database):
+        return execute('psql', '-XAt', '-v', 'ON_ERROR_STOP=1',
+                       '-U', 'tacacs_app', '-d', database, '-c', query)
+
+    original = migrations('tacacs')
+    if not original.strip() or original != migrations('tnac_restore_check'):
+        raise RuntimeError('restored migration history differs')
+
+
 def main():
     parser=argparse.ArgumentParser(description='Disposable real Compose smoke test')
     parser.add_argument('--admin',action='store_true',help='also verify isolated HTTPS admin container (requires cryptography)')
@@ -174,6 +195,9 @@ def main():
                 exec_probe(command,'admin',probe)
                 print('Restricted admin HTTPS/TLS1.3 console, anonymous session denial and mount isolation passed.')
             print('Compose database initialization, restricted AAA readiness, TCP49 and owner-file isolation passed.')
+            phase='disposable PostgreSQL backup and restore'
+            verify_backup_restore(command)
+            print('Disposable PostgreSQL dump/restore and migration checksum comparison passed.')
             status=0
         except Exception as error:
             # Never publish command output: database diagnostics may contain secrets.
