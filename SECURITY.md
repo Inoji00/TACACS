@@ -26,10 +26,12 @@ The candidate images passed PostgreSQL initialization, restart, and dump/restore
 
 The scan counts above apply to the candidate images. A fresh online build can resolve newer Python base layers and dependencies. Scan the exact image IDs that you deploy and record remaining findings. CVE reports can include image names and environment details. Share a redacted report privately with the maintainer.
 
-## v1.1.0 validation
+## Reproducible validation
 
-Local regression validation passed 424 tests. 44 tests were skipped and 38 socket-loopback tests were excluded from this run.
+The committed [tests](tests/) and [GitHub Actions workflow](.github/workflows/ci.yml) are the reproducible evidence. See [TESTING.md](TESTING.md) for clean-checkout commands, test scope, artifact locations and scan policy. CI builds both runtime images, runs Linux socket/TLS tests, full regression with disposable PostgreSQL, packaged-console checks and Compose smoke tests, and scans both complete images with Trivy.
 
-The release also passes JavaScript syntax checks and server-rendering checks against the packaged console for English/Vietnamese Slack configuration, secret masking and Users navigation. Browser preview could not reach the local test server, so this publication does not add a browser visual acceptance claim.
+Use the [run for the exact commit](https://github.com/Inoji00/TACACS/actions/workflows/ci.yml). JSON evidence separates passed, skipped, excluded and failed cases. The HIGH/CRITICAL gate includes unfixed findings and fails when a scan report is unavailable. Old candidate counts and exported-filesystem results above do not satisfy this gate. This document does not claim that the current images are free of CVEs.
 
-Operator acceptance confirmed Slack delivery for authentication PASS/FAIL, authorization allow, accounting start and account-lock notifications. The final fast activity and lock updates were accepted by the operator. The 3–5 second interval is a delivery target rather than a guaranteed deadline. Real PostgreSQL integration, fresh container builds, a fresh CVE scan and broader device acceptance remain outside this local publication run.
+The earlier “424 tests passed” statement described a local, partial run whose test sources were omitted from the original publication. It is not a reproducible CI result and is superseded by commit-linked workflow reports. The immutable v1.1.0 tag and installer ZIP have not been rewritten; the new test infrastructure is on main.
+
+Operator evidence of Slack authentication/authorization/accounting/lock notifications remains separate from CI. Software tests do not certify physical-device interoperability or guarantee a 3–5 second external delivery deadline.

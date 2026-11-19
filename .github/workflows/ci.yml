@@ -1,0 +1,123 @@
+name: Tests and image security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regression:
+    name: Python and packaged console
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - name: Install the checked-out package
+        run: python -m pip install -e '.[test]'
+      - name: Python regression including Linux sockets
+        run: |
+          mkdir -p artifacts
+          python scripts/run_tests.py --report artifacts/python.json 2>&1 | tee artifacts/python.log
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: tests/ui/package-lock.json
+      - name: Test the shipped English and Vietnamese console
+        working-directory: tests/ui
+        run: |
+          npm ci --ignore-scripts
+          npm test 2>&1 | tee ../../artifacts/console.log
+      - name: Save test evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: regression-${{ github.sha }}
+          path: artifacts/
+          retention-days: 30
+
+  images:
+    name: Real PostgreSQL, Compose and Trivy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - name: Install test dependencies
+        run: python -m pip install -e '.[test]'
+      - name: Build the actual application and database images
+        id: build
+        run: |
+          mkdir -p artifacts/integration
+          # Only this generated evidence directory is writable by the non-root test container.
+          chmod 0777 artifacts/integration
+          docker build --pull -t tnac:ci .
+          docker build --pull -f Dockerfile.postgres -t tnac-postgres:ci .
+          docker image inspect tnac:ci tnac-postgres:ci > artifacts/image-inspect.json
+          git rev-parse HEAD > artifacts/commit.txt
+          docker version > artifacts/docker-version.txt
+      - name: Complete Linux regression with disposable PostgreSQL
+        run: |
+          python scripts/test_postgres.py --linux --full --image tnac:ci --postgres-image tnac-postgres:ci \
+            --report artifacts/integration/postgres.json 2>&1 | tee artifacts/postgres.log
+      - name: Compose initialization, TCP49, TLS and credential isolation
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: |
+          python scripts/test_compose.py --admin --image tnac:ci --postgres-image tnac-postgres:ci \
+            2>&1 | tee artifacts/compose.log
+      - name: Install checksum-verified Trivy
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        id: trivy
+        env:
+          TRIVY_VERSION: '0.76.2'
+        run: |
+          work=$(mktemp -d)
+          cd "$work"
+          base="https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}"
+          archive="trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          curl --fail --show-error --location --retry 3 -o "$archive" "$base/$archive"
+          curl --fail --show-error --location --retry 3 -o checksums.txt "$base/trivy_${TRIVY_VERSION}_checksums.txt"
+          awk -v name="$archive" '$2 == name {print}' checksums.txt > selected.sha256
+          test -s selected.sha256
+          sha256sum --check selected.sha256
+          tar -xzf "$archive" trivy
+          install -m 0755 trivy "$RUNNER_TEMP/trivy"
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+      - name: Scan the complete TNAC image
+        if: ${{ !cancelled() && steps.trivy.outcome == 'success' }}
+        run: |
+          trivy image --scanners vuln --timeout 10m --format json --output artifacts/trivy-tnac.json tnac:ci
+          trivy convert --format table --output artifacts/trivy-tnac.txt artifacts/trivy-tnac.json
+      - name: Scan the complete PostgreSQL image
+        if: ${{ !cancelled() && steps.trivy.outcome == 'success' }}
+        run: |
+          trivy image --scanners vuln --timeout 10m --format json --output artifacts/trivy-postgres.json tnac-postgres:ci
+          trivy convert --format table --output artifacts/trivy-postgres.txt artifacts/trivy-postgres.json
+          trivy version --format json > artifacts/trivy-version.json
+      - name: Enforce HIGH and CRITICAL security gate
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: python scripts/check_trivy.py artifacts/trivy-tnac.json artifacts/trivy-postgres.json
+      - name: Save test and vulnerability evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: images-and-security-${{ github.sha }}
+          path: artifacts/
+          retention-days: 30

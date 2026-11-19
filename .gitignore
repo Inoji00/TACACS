@@ -11,3 +11,6 @@ __pycache__/
 *.pem
 *.key
 *.log
+node_modules/
+artifacts/
+.test-tmp/

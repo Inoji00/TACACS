@@ -1,0 +1,13 @@
+{
+  "name": "tnac-packaged-console-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node test-slack-alerts.mjs && node test-inventory-navigation.mjs"
+  },
+  "devDependencies": {
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "typescript": "5.9.3"
+  }
+}

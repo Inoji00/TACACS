@@ -26,10 +26,12 @@ Hai image ứng viên đã qua initdb, restart và dump/restore PostgreSQL, kh�
 
 Các số trên thuộc về image ứng viên. Source online có thể lấy base Python và dependency khác ở lần build tiếp theo. Cần quét đúng image ID của mỗi bản build dùng để triển khai và ghi nhận các phát hiện còn lại. Báo cáo CVE có thể chứa tên image và thông tin môi trường. Khi báo lỗi, gửi riêng bản đã loại thông tin nhạy cảm cho maintainer.
 
-## Kiểm chứng v1.1.0
+## Kiểm chứng có thể chạy lại
 
-Kiểm thử hồi quy local có 424 bài pass. 44 bài skip và 38 bài socket loopback được loại khỏi lượt chạy.
+[Bộ test trong repo](tests/) và [GitHub Actions](.github/workflows/ci.yml) cung cấp bằng chứng có thể chạy lại. Xem [TESTING.vi.md](TESTING.vi.md) để lấy CLI từ checkout sạch, phạm vi kiểm tra, vị trí artifact và chính sách quét. CI build cả hai image runtime, chạy socket/TLS Linux, hồi quy với PostgreSQL dùng một lần, kiểm tra console đóng gói và Compose smoke, đồng thời quét hai image đầy đủ bằng Trivy.
 
-JavaScript đã qua kiểm tra cú pháp và render từ bundle đóng gói cho trang Slack Anh/Việt, ẩn webhook và điều hướng Users. Trình duyệt preview chưa kết nối được server local, nên đợt xuất bản này chưa bổ sung nghiệm thu trực quan trên trình duyệt.
+Đối chiếu [lần chạy đúng commit](https://github.com/Inoji00/TACACS/actions/workflows/ci.yml). JSON tách riêng pass, skip, loại khỏi lượt chạy và lỗi. Gate HIGH/CRITICAL tính cả CVE chưa có bản vá; thiếu báo cáo cũng thất bại. Số liệu ứng viên và kết quả filesystem cũ ở trên không đáp ứng gate này. Tài liệu không tuyên bố image hiện tại hết CVE.
 
-Người vận hành đã cung cấp bằng chứng tin Slack cho xác thực PASS/FAIL, authorization allow, accounting start và khóa tài khoản, đồng thời chấp nhận các cập nhật hoạt động nhanh và khóa nhanh cuối cùng. Mốc 3–5 giây là mục tiêu, độ trễ phụ thuộc mạng, hàng đợi và Slack. PostgreSQL thật, build container mới, quét CVE mới và nghiệm thu thiết bị rộng hơn chưa được chạy lại trong đợt xuất bản local này.
+Câu “424 tests passed” trước đây thuộc lượt local chưa đầy đủ và bản xuất bản ban đầu thiếu source test. Đây không phải kết quả CI có thể tái lập; thay bằng báo cáo workflow gắn với commit. Tag và ZIP v1.1.0 bất biến không bị ghi đè; hạ tầng test mới nằm trên main.
+
+Bằng chứng người vận hành nhận Slack authentication/authorization/accounting/lock được tách khỏi CI. Kiểm thử phần mềm không chứng nhận tương thích thiết bị thật hay bảo đảm deadline gửi ra ngoài 3–5 giây.

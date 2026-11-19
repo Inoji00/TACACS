@@ -1,0 +1,12 @@
+tenant_id = "00000000-0000-0000-0000-000000000001"
+database_dsn_file = "../secrets/admin_dsn"
+origin = "https://localhost:8443"
+port = 8443
+csrf_key_file = "../secrets/admin_csrf"
+cert_file = "../secrets/admin_cert.pem"
+key_file = "../secrets/admin_key.pem"
+# Uncomment to REQUIRE a trusted client certificate in addition to password/TOTP.
+# client_ca_file = "../secrets/admin_client_ca.pem"
+
+[mfa_references]
+"secret://admin-totp" = "../secrets/admin_totp"
