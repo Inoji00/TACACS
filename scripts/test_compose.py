@@ -49,11 +49,21 @@ def exec_probe(command, service, probe):
 
 
 def verify_backup_restore(command):
-    prefix = command + ['exec', '-T', 'postgres']
+    container = subprocess.check_output(command + ['ps', '-q', 'postgres'],
+                                        text=True, timeout=15).strip()
+    if not re.fullmatch('[0-9a-f]{12,64}', container):
+        raise ValueError('expected one running PostgreSQL test container')
 
     def execute(*args, input=None):
-        return subprocess.run(prefix + list(args), input=input, capture_output=True,
-                              check=True, timeout=30).stdout
+        print(f'PostgreSQL backup/restore: {args[0]}', flush=True)
+        # Only restore reads the archive from stdin. Keep other commands non-interactive.
+        invocation = ['docker', 'exec']
+        if input is not None:
+            invocation.append('-i')
+        invocation.extend([container, *args])
+        return subprocess.run(invocation, input=input,
+                              stdin=subprocess.DEVNULL if input is None else None,
+                              capture_output=True, check=True, timeout=120).stdout
 
     backup = execute('pg_dump', '-U', 'tacacs_app', '-Fc', 'tacacs')
     execute('createdb', '-U', 'tacacs_app', 'tnac_restore_check')
