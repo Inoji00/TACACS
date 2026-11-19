@@ -30,3 +30,4 @@ Khi được hỏi subnet, nhập CIDR chứa IPv4 của VM. Mở URL HTTPS trì
 - [Kiểm soát bảo mật, bản vá CVE và phạm vi kiểm thử](SECURITY.vi.md)
 - [Nâng cấp appliance v1.0 đang sử dụng](UPGRADE.vi.md)
 - [Lịch sử phát hành](CHANGELOG.vi.md)
+- [Kết nối switch Cisco với TNAC+ (Anh–Việt)](CISCO-AAA.md)

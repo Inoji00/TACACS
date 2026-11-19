@@ -30,3 +30,4 @@ When prompted, enter the CIDR containing the VM's IPv4 address. Open the HTTPS U
 - [Security controls, CVE patch status, and test coverage](SECURITY.md)
 - [Upgrade an existing v1.0 appliance](UPGRADE.md)
 - [Release history](CHANGELOG.md)
+- [Connect a Cisco switch to TNAC+ (English / Tiếng Việt)](CISCO-AAA.md)
