@@ -10,6 +10,11 @@ TNAC+ tích hợp cảnh báo hoạt động/sức khỏe qua Slack, báo khóa 
 
 > **[Kiểm chứng bảo mật](SECURITY-VALIDATION.vi.md)** · 66 bài bảo mật local · 512 bài hồi quy CI · 0 Critical / 0 High
 
+> [!IMPORTANT]
+> **Đã kiểm chứng trên switch Cisco.** TNAC+ đã được thử trên Cisco Catalyst 2960X trong lab với đăng nhập TACACS+, cấp quyền EXEC, ghi log phiên và lệnh, và thu Syslog vận hành. Khả năng tương thích phụ thuộc model, hệ điều hành, firmware và cấu hình switch.
+>
+> **Cần hỗ trợ tích hợp hãng khác?** Nếu chưa kết nối được, gửi email đến **[lehoangtuansang@gmail.com](mailto:lehoangtuansang@gmail.com)**. Ghi rõ hãng, model, OS/firmware, tính năng cần dùng và lỗi hoặc log mẫu đã che thông tin nhạy cảm. Phản hồi của bạn giúp xử lý vướng mắc, mở rộng phạm vi kiểm thử và cải thiện TNAC+ cho cộng đồng.
+
 ## Kiểm thử và bảo mật
 
 [Workflow và artifact](https://github.com/Inoji00/TACACS/actions/workflows/ci.yml) · [CLI chạy lại test và Trivy](TESTING.vi.md). Clone mặc định lấy `main`. Dùng ZIP theo phiên bản khi cần cố định bản cài.

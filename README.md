@@ -10,6 +10,11 @@ TNAC+ integrates Slack activity and health alerts, fast account-lock notificatio
 
 > **[Security validation](SECURITY-VALIDATION.md)** · 66 focused security tests · 512 CI regression tests · 0 Critical / 0 High
 
+> [!IMPORTANT]
+> **Cisco switch integration verified.** TNAC+ has been tested on a Cisco Catalyst 2960X in the lab for TACACS+ sign-in, EXEC authorization, session and command accounting, and receipt of operational Syslog. Compatibility depends on the switch model, OS, firmware and configuration.
+>
+> **Need help integrating another vendor?** If you cannot get it working, email **[lehoangtuansang@gmail.com](mailto:lehoangtuansang@gmail.com)** with the vendor, model, OS/firmware, desired feature and a redacted error or log sample. These reports help resolve integration issues, broaden tested coverage and improve TNAC+ for everyone.
+
 ## Tests and security checks
 
 [Workflow and artifacts](https://github.com/Inoji00/TACACS/actions/workflows/ci.yml) · [Reproduce tests and Trivy scans](TESTING.md). A default clone tracks `main`. Use the versioned ZIP for a fixed release.
