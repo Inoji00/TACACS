@@ -2,6 +2,8 @@
 
 **English** · [Tiếng Việt](SECURITY.vi.md)
 
+[Responsible use and disclaimer](DISCLAIMER.md)
+
 > **[Security validation](SECURITY-VALIDATION.md)** · 66 focused security tests · 512 CI regression tests · 0 Critical / 0 High
 
 ## Security controls

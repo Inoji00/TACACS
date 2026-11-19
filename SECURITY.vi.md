@@ -2,6 +2,8 @@
 
 [English](SECURITY.md) · **Tiếng Việt**
 
+[Sử dụng có trách nhiệm và miễn trừ trách nhiệm](DISCLAIMER.vi.md)
+
 > **[Kiểm chứng bảo mật](SECURITY-VALIDATION.vi.md)** · 66 bài bảo mật local · 512 bài hồi quy CI · 0 Critical / 0 High
 
 ## Kiểm soát hiện có

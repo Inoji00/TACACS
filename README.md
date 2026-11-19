@@ -2,6 +2,8 @@
 
 **English** · [Tiếng Việt](README.vi.md)
 
+[MIT License](LICENSE) · [Responsible use and disclaimer](DISCLAIMER.md)
+
 TNAC+ is a TACACS+ server for network device administration. Its web console manages devices, identity groups, EXEC access mappings, command policies, and AAA logs. Available capabilities depend on the device's TACACS+ client, configuration, and firmware.
 
 TNAC+ integrates Slack activity and health alerts, fast account-lock notifications, fourth-failure device lockout, and the accepted Dashboard/Users layout. Recorded activity is polled every three seconds; normal Slack delivery targets about 3–5 seconds. Command notifications require device command accounting. See the [changes](CHANGELOG.md) and [upgrade procedure](UPGRADE.md).

@@ -2,6 +2,8 @@
 
 [English](README.md) · **Tiếng Việt**
 
+[Giấy phép MIT](LICENSE) · [Sử dụng có trách nhiệm và miễn trừ trách nhiệm](DISCLAIMER.vi.md)
+
 TNAC+ là máy chủ TACACS+ để quản trị thiết bị mạng. Web console quản lý thiết bị, identity group, ánh xạ quyền EXEC, command policy và nhật ký AAA. Khả năng thực tế phụ thuộc vào TACACS+ client, cấu hình và firmware của thiết bị.
 
 TNAC+ tích hợp cảnh báo hoạt động/sức khỏe qua Slack, báo khóa tài khoản nhanh, khóa thiết bị ở lần sai thứ 4 và bố cục Dashboard/Users đã được chấp nhận. Hoạt động được đọc mỗi 3 giây; mục tiêu gửi Slack khoảng 3–5 giây khi điều kiện bình thường. Muốn nhận lệnh, thiết bị cần gửi command accounting. Xem [thay đổi](CHANGELOG.vi.md) và [quy trình nâng cấp](UPGRADE.vi.md).
