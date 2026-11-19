@@ -20,7 +20,7 @@ Nếu cần cài Docker Engine hoặc plugin, dùng [hướng dẫn Docker Engin
 ## Tải source và cài
 
 ```bash
-git clone --branch v1.1.0 https://github.com/Inoji00/TACACS.git 'TNAC+'
+git clone https://github.com/Inoji00/TACACS.git 'TNAC+'
 cd 'TNAC+'
 sudo bash install.sh
 ```
@@ -28,14 +28,14 @@ sudo bash install.sh
 Với ZIP và checksum được cung cấp cùng nhau, có thể dùng:
 
 ```bash
-sha256sum -c TNAC-v1.1.0.zip.sha256 && unzip TNAC-v1.1.0.zip
+sha256sum -c TNAC-v1.1.1.zip.sha256 && unzip TNAC-v1.1.1.zip
 cd 'TNAC+'
 sudo bash install.sh
 ```
 
 Trình cài kiểm tra IP, cổng, Docker và tên container trước khi tải dependency hoặc build image. Trình cài hỏi subnet và chọn IPv4 khi có đúng một địa chỉ trên VM khớp CIDR. Nếu có nhiều địa chỉ, nhập CIDR /32 của đúng IPv4 đã gán. Stack dùng TCP/49 cho thiết bị và HTTPS/8443 cho mạng quản trị. HTTPS chỉ publish trên IPv4 quản trị đã chọn. Docker hiển thị mapping HTTPS ở tnac-db do proxy dùng chung network namespace. PostgreSQL TCP/5432 dùng nội bộ.
 
-Trình cài build hai image local là `tnac:current` và `tnac-postgres:16.16-r2`. Image ứng dụng dùng Python 3.12 trên Debian Trixie và kiểm tra phiên bản vá của `zlib1g`. Image PostgreSQL giữ major 16 và chạy database với UID 70 qua `su-exec`.
+Trình cài build hai image local là `tnac:current` và `tnac-postgres:16.16-r2`. Image ứng dụng dùng Python 3.12 trên Alpine 3.23. Image PostgreSQL giữ major 16 và chạy database với UID 70 qua `su-exec`.
 
 ```bash
 sudo bash tnac status

@@ -2,6 +2,13 @@
 
 [English](CHANGELOG.md) · **Tiếng Việt**
 
+## v1.1.1 — 19/11/2026
+
+- Chuyển runtime TNAC sang Python 3.12 trên Alpine 3.23.
+- Loại binary Go `gosu` cũ khỏi các layer PostgreSQL phát hành và giữ `su-exec` cùng UID 70.
+- Thêm hồi quy PostgreSQL thật, Compose smoke, dump/restore, Trivy và kiểm tra dữ liệu nhạy cảm trong CI.
+- Giữ nguyên 37 migration. Clone mặc định lấy nhánh `main`; ZIP cố định theo tag.
+
 ## v1.1.0 — 18/11/2026
 
 - Thêm cấu hình Slack Incoming Webhook, gửi tin thử qua hàng đợi, trạng thái gửi và các nhóm sự kiện trên Web Admin.

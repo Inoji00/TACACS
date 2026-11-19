@@ -20,7 +20,7 @@ If Docker Engine or its plugins are missing, follow the [Docker Engine installat
 ## Download and install
 
 ```bash
-git clone --branch v1.1.0 https://github.com/Inoji00/TACACS.git 'TNAC+'
+git clone https://github.com/Inoji00/TACACS.git 'TNAC+'
 cd 'TNAC+'
 sudo bash install.sh
 ```
@@ -28,14 +28,14 @@ sudo bash install.sh
 If you have the installer ZIP and its checksum, use:
 
 ```bash
-sha256sum -c TNAC-v1.1.0.zip.sha256 && unzip TNAC-v1.1.0.zip
+sha256sum -c TNAC-v1.1.1.zip.sha256 && unzip TNAC-v1.1.1.zip
 cd 'TNAC+'
 sudo bash install.sh
 ```
 
 The installer checks the IP address, ports, Docker, and container names before downloading dependencies or building images. It selects the VM's IPv4 address when exactly one address matches the CIDR you enter. If several addresses match, enter the exact address with a `/32` prefix. Devices use TCP/49 and Web Admin uses HTTPS/8443. Docker shows the HTTPS port on `tnac-db` because the proxy shares its network namespace. PostgreSQL TCP/5432 stays internal.
 
-The installer builds `tnac:current` and `tnac-postgres:16.16-r2` locally. The app image uses Python 3.12 on Debian Trixie and checks that `zlib1g` meets the minimum patched version. The PostgreSQL image stays on major version 16 and runs the database as UID 70 through `su-exec`.
+The installer builds `tnac:current` and `tnac-postgres:16.16-r2` locally. The app image uses Python 3.12 on Alpine 3.23. The PostgreSQL image stays on major version 16 and runs the database as UID 70 through `su-exec`.
 
 ```bash
 sudo bash tnac status

@@ -3,6 +3,7 @@ name: Tests and image security
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
@@ -29,6 +30,20 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'
+      - name: Check release privacy and tag version
+        env:
+          RELEASE_REF: ${{ github.ref }}
+        run: |
+          python scripts/check_release_privacy.py
+          python - <<'PYVERSION'
+          import os, tomllib
+          with open("pyproject.toml", "rb") as file:
+              version = tomllib.load(file)["project"]["version"]
+          ref = os.environ["RELEASE_REF"]
+          if ref.startswith("refs/tags/") and ref != f"refs/tags/v{version}":
+              raise SystemExit("Tag must match package version")
+          print(f"TNAC+ {version}")
+          PYVERSION
       - name: Install the checked-out package
         run: python -m pip install -e '.[test]'
       - name: Python regression including Linux sockets
@@ -74,6 +89,10 @@ jobs:
           chmod 0777 artifacts/integration
           docker build --pull -t tnac:ci .
           docker build --pull -f Dockerfile.postgres -t tnac-postgres:ci .
+          version=$(python -c 'from importlib.metadata import version; print(version("local-tacacs-appliance"))')
+          docker run --rm --network none --entrypoint python tnac:ci -c \
+            'import sys; from importlib.metadata import version; sys.exit(version("local-tacacs-appliance") != sys.argv[1])' "$version"
+          printf '%s\n' "$version" > artifacts/version.txt
           docker image inspect tnac:ci tnac-postgres:ci > artifacts/image-inspect.json
           git rev-parse HEAD > artifacts/commit.txt
           docker version > artifacts/docker-version.txt
@@ -125,3 +144,31 @@ jobs:
           name: images-and-security-${{ github.sha }}
           path: artifacts/
           retention-days: 30
+
+  release:
+    name: Publish versioned installer
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [regression, images]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Package verified source and publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          archive="TNAC-${RELEASE_TAG}.zip"
+          git archive --format=zip --prefix='TNAC+/' --output="$archive" HEAD
+          sha256sum "$archive" > "$archive.sha256"
+          for file in CHANGELOG.md CHANGELOG.vi.md; do
+            awk -v heading="## $RELEASE_TAG " 'index($0, heading)==1 { printing=1; next } printing && /^## / { exit } printing { print }' "$file" >> release-notes.md
+          done
+          test -s release-notes.md
+          printf '\nCI evidence: %s/%s/actions/runs/%s\n' "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" >> release-notes.md
+          gh release create "$RELEASE_TAG" "$archive" "$archive.sha256" \
+            --verify-tag --latest --title "TNAC+ $RELEASE_TAG" --notes-file release-notes.md

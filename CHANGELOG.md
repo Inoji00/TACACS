@@ -2,6 +2,13 @@
 
 **English** · [Tiếng Việt](CHANGELOG.vi.md)
 
+## v1.1.1 — 2026-11-19
+
+- Run TNAC on Python 3.12 with Alpine 3.23.
+- Remove the superseded Go `gosu` binary from published PostgreSQL layers and retain `su-exec` with UID 70.
+- Add reproducible PostgreSQL regression, Compose smoke, dump/restore, Trivy, and release privacy checks to CI.
+- Preserve the 37 migrations. A default clone tracks `main`; the versioned ZIP pins the release.
+
 ## v1.1.0 — 2026-11-18
 
 - Add Slack Incoming Webhook configuration, queued test messages, delivery status and selectable notification groups in Web Admin.

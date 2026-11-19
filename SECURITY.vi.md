@@ -20,6 +20,10 @@ Kết quả dưới đây thuộc các image ứng viên ở đợt trước. Ch
 | `zlib1g` | Build nâng gói lên bản vá Debian hoặc mới hơn và kiểm tra phiên bản tối thiểu. | Trivy không còn phát hiện CVE-2026-85091 trên image TNAC+ r2. [Debian Security Tracker](https://security-tracker.debian.org/tracker/CVE-2026-85091) |
 | PostgreSQL và `gosu` | Chuyển PostgreSQL lên 16.16 trên Alpine 3.23. Base image được chốt theo digest. Entrypoint chuyển quyền sang UID 70 qua `su-exec`. | Trivy vẫn báo 1 Critical và 25 High ở đường dẫn `gosu` khi quét image theo layer. Quét filesystem xuất từ image ghi nhận 0 Critical và 0 High sau khi xác nhận đích symlink là `su-exec`. [Go advisory](https://pkg.go.dev/vuln/GO-2026-4337) |
 
+## Kiểm chứng v1.1.1
+
+Runtime TNAC dùng Alpine 3.23. PostgreSQL dùng `su-exec` và image phát hành không chứa layer có binary Go `gosu` cũ. Xem kết quả Trivy của đúng commit trong GitHub Actions.
+
 ## Phạm vi kiểm thử và phần còn mở
 
 Hai image ứng viên đã qua initdb, restart và dump/restore PostgreSQL, khởi tạo migrations, kiểm tra TCP/49 readiness, HTTPS trực tiếp tới Web Admin, đăng nhập, đăng xuất và thu hồi cookie cũ. AAA trên switch thật và đường HTTPS qua proxy chưa được nghiệm thu trong đợt này.

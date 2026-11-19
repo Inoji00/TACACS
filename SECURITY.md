@@ -20,6 +20,10 @@ The following results belong to earlier candidate images. The v1.1.0 image has n
 | `zlib1g` | Upgrade to the Debian patched version or newer during build and enforce the minimum version. | Trivy no longer detected CVE-2026-85091 on the TNAC+ r2 candidate. [Debian Security Tracker](https://security-tracker.debian.org/tracker/CVE-2026-85091) |
 | PostgreSQL and `gosu` | Upgrade to PostgreSQL 16.16 on Alpine 3.23, pin the base image digest, and drop to UID 70 through `su-exec` at startup. | Image-layer scanning still reported 1 Critical and 25 High findings at the old `gosu` path. A scan of the exported filesystem reported 0 Critical and 0 High after verifying that the symlink resolves to `su-exec`. [Go advisory](https://pkg.go.dev/vuln/GO-2026-4337) |
 
+## v1.1.1 verification
+
+TNAC uses Alpine 3.23. PostgreSQL uses `su-exec` and the published image excludes the layer containing the superseded Go `gosu` binary. Use the Trivy report for the exact commit in GitHub Actions.
+
 ## Test coverage and open items
 
 The candidate images passed PostgreSQL initialization, restart, and dump/restore checks, schema migrations, TCP/49 readiness, and direct HTTPS access to Web Admin. Login, logout, and rejection of the revoked session cookie were verified. AAA on physical switches and HTTPS through the proxy remain unverified for these candidates.
