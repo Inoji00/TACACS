@@ -1,4 +1,6 @@
-FROM postgres:16-alpine3.23@sha256:9afe26709faad4c173fea5380b215bd6eb9691b05aa1be5b86cec8e0285da914
+# Publish only the prepared filesystem so the superseded Go binary is
+# absent from the distributed layers as well as the running container.
+FROM postgres:16-alpine3.23@sha256:9afe26709faad4c173fea5380b215bd6eb9691b05aa1be5b86cec8e0285da914 AS prepared
 RUN set -eux; \
     apk add --no-cache su-exec; \
     rm /usr/local/bin/su-exec /usr/local/bin/gosu; \
@@ -6,3 +8,13 @@ RUN set -eux; \
     test -x "$helper"; \
     ln -s "$helper" /usr/local/bin/gosu; \
     test "$(gosu postgres id -u)" = 70
+
+FROM scratch
+COPY --from=prepared / /
+ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+    LANG=en_US.utf8 PG_MAJOR=16 PG_VERSION=16.16 PGDATA=/var/lib/postgresql/data
+VOLUME ["/var/lib/postgresql/data"]
+EXPOSE 5432
+STOPSIGNAL SIGINT
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["postgres"]
