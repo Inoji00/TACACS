@@ -41,15 +41,44 @@ The collector also exports retained SQLite events to `/var/lib/tnac-syslog/archi
 
 New deployments use the volume and container name `tnac-syslog`. Existing deployments retain their configured volume and its logs. The status command keeps all default Compose columns. / Bản cài mới dùng tên volume và container `tnac-syslog`. Hệ thống hiện hữu giữ volume và log đang có. Bảng trạng thái giữ đầy đủ cột Compose.
 
+Run these read-only commands on the Ubuntu VM. / Chạy các lệnh chỉ đọc sau trên VM Ubuntu.
+
 ```bash
 cd "$HOME/TNAC+"
 project=$(sudo docker inspect -f '{{index .Config.Labels "com.docker.compose.project"}}' tnac-app)
 sudo docker compose -p "$project" -f data/vm-appliance/compose.json ps
-sudo docker exec tnac-admin find /var/lib/tnac-syslog/archive -maxdepth 2 -type f -name '*.log' | sort
-sudo docker exec tnac-admin grep -F 'CONFIG_I' /var/lib/tnac-syslog/archive/192.0.2.10/2026-11-19.log
+sudo docker port tnac-syslog
 ```
 
-Use the IP and date returned by `find`. Verify that old events appear after backfill and a new lab event appears in the corresponding file. / Dùng IP và ngày do `find` in ra. Kiểm tra log cũ đã được xuất và sự kiện lab mới xuất hiện trong file tương ứng.
+`inspect` reads the active Compose project name. `compose ps` shows the full status table. `docker port` confirms the host UDP/514 to collector UDP/1514 mapping. On an older deployment without the short name, use the collector name printed by `compose ps`. / `inspect` đọc tên Compose project đang chạy. `compose ps` hiển thị đầy đủ trạng thái. `docker port` xác nhận ánh xạ UDP/514 của VM vào UDP/1514 của collector. Nếu bản cũ chưa có tên ngắn, dùng tên collector từ bảng trạng thái.
+
+```bash
+sudo docker exec tnac-admin find /var/lib/tnac-syslog/archive -maxdepth 2 -type f -name '*.log' | sort
+```
+
+`find` lists files by source IP and date. Use an IP and date returned by the command. The path is inside the container. / `find` liệt kê file theo IP nguồn và ngày. Thay IP và ngày theo kết quả vừa in. Đây là đường dẫn bên trong container.
+
+```bash
+log=/var/lib/tnac-syslog/archive/192.0.2.10/2026-11-19.log
+sudo docker exec tnac-admin tail -n 30 "$log"
+sudo docker exec tnac-admin grep -F 'CONFIG_I' "$log"
+sudo docker exec tnac-admin grep -F '%PARSER' "$log"
+sudo docker exec tnac-admin grep -E 'LINK|LINEPROTO' "$log"
+```
+
+`tail` shows the last 30 records. `grep -F` searches literal text. `CONFIG_I` shows configuration-change events and `%PARSER` selects Cisco parser messages. `grep -E` matches either link-related keyword. / `tail` xem 30 dòng cuối. `grep -F` tìm chuỗi chữ. `CONFIG_I` lọc sự kiện thay đổi cấu hình và `%PARSER` lọc bản tin parser Cisco. `grep -E` tìm một trong hai từ khóa trạng thái cổng.
+
+If a new event is missing, generate a safe lab event while this capture runs. Replace the example source IP. / Nếu thiếu sự kiện mới, thay IP mẫu và tạo sự kiện lab an toàn trong lúc lệnh bắt gói chạy.
+
+```bash
+sudo timeout 60 tcpdump -ni any -nn -c 3 'src host 192.0.2.10 and udp dst port 514'
+```
+
+A captured packet confirms arrival at the VM. Allow about one minute for the daily archive to refresh. If no packet arrives, check the switch destination, routing and ACLs. If packets arrive but the file is still empty, inspect collector logs. / Có gói nghĩa là bản tin đã đến VM. Chờ khoảng một phút để file cập nhật. Nếu không thấy gói, kiểm tra đích Syslog trên switch, định tuyến và ACL. Nếu có gói nhưng file vẫn trống, xem log collector.
+
+```bash
+sudo docker compose -p "$project" -f data/vm-appliance/compose.json logs --tail 50 device-syslog
+```
 
 ## Rollback / Hoàn tác
 
