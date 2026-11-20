@@ -113,7 +113,7 @@
     ]});
     const labels = vietnamese ? severityVi : severity;
     const headings = [t('Received','Thời điểm nhận'), t('Source IP','IP nguồn'),
-      t('Device','Thiết bị'), t('Severity','Mức độ'), t('Message','Nội dung')];
+      t('Severity','Mức độ'), t('Message','Nội dung')];
     return jsxs('section', {className:'card', children:[
       jsx('h2',{children:t('Device Syslog','Syslog thiết bị')}),
       jsx('p',{className:'hint',children:t('Search the last 30 days by collector receive time. Time filters use your browser’s local time.',
@@ -177,11 +177,11 @@
         jsx('tbody',{children:result.items.map(row=>jsxs('tr',{children:[
           jsx('td',{children:new Date(row.received).toLocaleString(vietnamese?'vi-VN':'en',{hourCycle:'h23'})}),
           jsx('td',{children:row.source}),
-          jsx('td',{title:row.name ? row.name+' · '+types[row.profile] : types.unclassified,
-            children:row.name ? row.name+' · '+types[row.profile] : types.unclassified}),
           jsx('td',{children:row.severity == null ? '—' : row.severity+' · '+labels[row.severity]}),
-          jsx('td',{children:jsx('div',{className:'device-syslog-message',tabIndex:0,
-            children:row.message.replace(/\r\n|[\r\n]/g,' ↵ ')})}),
+          jsx('td',{children:jsxs('details',{className:'device-syslog-message',children:[
+            jsx('summary',{children:jsx('span',{children:row.message.replace(/\r\n|[\r\n]/g,' ↵ ')})}),
+            jsx('pre',{children:row.message}),
+          ]})}),
         ]},row.id))}),
       ]})}),
       result?.next_before && jsx('button',{type:'button',className:'secondary',disabled:busy,

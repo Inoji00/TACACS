@@ -160,7 +160,7 @@ class SlackActivityCursorTests(unittest.TestCase):
                     records, ['aaa_activity']),
         ]
         self.cycle(1003, events, 9)
-        self.assertEqual(self.sender.call_args.args[1], '🧪 Slack Test · Requested by an administrator')
+        self.assertEqual(self.sender.call_args.args[1], '🧪 Webhook Test · Requested by an administrator')
         self.cycle(1006, [], 9)
         self.assertEqual(self.sender.call_args.args[1], events[0]['text'])
         self.cycle(1009, [], 9)

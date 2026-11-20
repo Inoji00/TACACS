@@ -2,6 +2,10 @@
 
 [English](CHANGELOG.md) · **Tiếng Việt**
 
+## Chưa phát hành
+
+- Thêm Mattermost làm lựa chọn nhận cảnh báo bên cạnh Slack. Máy Linux chỉ gửi webhook Mattermost đến tên DNS do quản trị viên phê duyệt.
+
 ## v1.1.4 — 20/11/2026
 
 - Thêm biểu tượng đầu dòng theo loại cảnh báo. Giới hạn hàng đợi Slack ở 5 sự kiện TACACS+ cho mỗi IP thiết bị và loại sự kiện trong cửa sổ trượt 60 giây. Nhật ký audit vẫn lưu đầy đủ.

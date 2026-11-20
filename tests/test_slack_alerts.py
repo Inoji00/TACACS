@@ -127,7 +127,7 @@ class SlackMonitorTests(unittest.TestCase):
     def test_test_alert_can_send_while_automatic_alerting_disabled(self):
         self.storage.files['settings.json'].update(enabled=False, test_id='example')
         self.cycle(1000)
-        self.assertIn('Slack Test', self.sender.call_args.args[1])
+        self.assertIn('Webhook Test', self.sender.call_args.args[1])
         self.cycle(1060)
         self.assertEqual(self.sender.call_count, 1)
 
@@ -173,6 +173,44 @@ class SlackStorageTests(unittest.TestCase):
         opener.open.side_effect = HTTPError(WEBHOOK, 429, 'secret', {'Retry-After': '300'}, None)
         with patch('slack_monitor.build_opener', return_value=opener):
             self.assertEqual(send_slack(WEBHOOK, 'example'), ('Slack rate limited', 300))
+
+    def test_mattermost_requires_host_approval_and_escapes_log_markup(self):
+        url = 'https://mattermost.example.test/hooks/exampletoken123456'
+        response = Mock(status=200)
+        response.read.return_value = b'ok'
+        opener = Mock()
+        opener.open.return_value = nullcontext(response)
+        with patch.dict('os.environ', {'TNAC_MATTERMOST_HOST': 'other.example.test'}), \
+             patch('slack_monitor.build_opener', return_value=opener) as make_opener:
+            self.assertEqual(send_slack(url, 'example')[0], 'Mattermost host is not approved')
+            make_opener.assert_not_called()
+        with patch.dict('os.environ', {'TNAC_MATTERMOST_HOST': 'mattermost.example.test'}), \
+             patch('slack_monitor.build_opener', return_value=opener):
+            self.assertEqual(send_slack(url, '@channel <!here> **example**'), (None, 0))
+        payload = json.loads(opener.open.call_args.args[0].data)
+        self.assertEqual(payload, {'text': '＠channel ‹\\!here› \\*\\*example\\*\\*'})
+
+    def test_mattermost_accepts_only_https_hook_urls_and_never_follows_redirect(self):
+        from slack_monitor import NoRedirect
+
+        url = 'https://mattermost.example.test/hooks/exampletoken123456'
+        self.assertEqual(validate_webhook(url), url)
+        invalid = (
+            url.replace('https:', 'http:'),
+            url.replace('mattermost.example.test', 'mattermost.example.test@127.0.0.1'),
+            url.replace('mattermost.example.test', '127.0.0.1'),
+            url.replace('/hooks/', '/api/v4/'),
+            url + '?redirect=https://example.test',
+            url + '#fragment',
+        )
+        for target in invalid:
+            with self.subTest(target=target), self.assertRaises(ValueError):
+                validate_webhook(target)
+        for status in (301, 302, 303, 307, 308):
+            with self.subTest(status=status):
+                self.assertIsNone(NoRedirect().redirect_request(
+                    None, None, status, '', {}, 'https://other.example.test/hooks/exampletoken123456',
+                ))
 
 
 class SlackApiTests(unittest.TestCase):

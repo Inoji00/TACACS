@@ -3,19 +3,20 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 import re
 import ssl
 import subprocess
 import time
 from urllib.error import HTTPError, URLError
-from urllib.request import HTTPRedirectHandler, HTTPSHandler, Request, build_opener
+from urllib.request import HTTPRedirectHandler, HTTPSHandler, ProxyHandler, Request, build_opener
 
 import local_appliance as local
 try:
-    from alert_storage import ACTIVITY_EVENTS, AlertStorage, DEFAULTS, validate_webhook
+    from alert_storage import ACTIVITY_EVENTS, AlertStorage, DEFAULTS, MATTERMOST_URL, validate_webhook
 except ModuleNotFoundError:
-    from tacacs_appliance.alert_storage import ACTIVITY_EVENTS, AlertStorage, DEFAULTS, validate_webhook
+    from tacacs_appliance.alert_storage import ACTIVITY_EVENTS, AlertStorage, DEFAULTS, MATTERMOST_URL, validate_webhook
 
 
 class NoRedirect(HTTPRedirectHandler):
@@ -26,22 +27,33 @@ class NoRedirect(HTTPRedirectHandler):
 def send_slack(webhook, text):
     """Return a redacted result and retry delay, never the secret URL or response body."""
     validate_webhook(webhook)
-    body = json.dumps({'text': 'TNAC+ monitoring alert', 'blocks': [
-        {'type': 'section', 'text': {'type': 'plain_text', 'text': text[:2900]}}]}).encode('utf-8')
+    mattermost = MATTERMOST_URL.fullmatch(webhook)
+    provider = 'Mattermost' if mattermost else 'Slack'
+    handlers = [NoRedirect(), HTTPSHandler(context=ssl.create_default_context())]
+    if mattermost:
+        if mattermost['host'] != os.environ.get('TNAC_MATTERMOST_HOST'):
+            return 'Mattermost host is not approved', 3600
+        handlers.append(ProxyHandler({}))
+        sanitized = text[:2900].translate(str.maketrans({'@': '＠', '<': '‹', '>': '›'}))
+        payload = {'text': re.sub(r'([\\`*_{}\[\]()#+\-.!|~])', r'\\\1', sanitized)}
+    else:
+        payload = {'text': 'TNAC+ monitoring alert', 'blocks': [
+            {'type': 'section', 'text': {'type': 'plain_text', 'text': text[:2900]}}]}
+    body = json.dumps(payload).encode('utf-8')
     request = Request(webhook, data=body, headers={'Content-Type': 'application/json'}, method='POST')
-    opener = build_opener(NoRedirect(), HTTPSHandler(context=ssl.create_default_context()))
+    opener = build_opener(*handlers)
     try:
         with opener.open(request, timeout=5) as response:
             accepted = response.status == 200 and response.read(16).strip() == b'ok'
-        return (None, 0) if accepted else ('Slack response rejected', 300)
+        return (None, 0) if accepted else (provider + ' response rejected', 300)
     except HTTPError as exc:
         if exc.code == 429:
             retry = (exc.headers or {}).get('Retry-After', '60')
             delay = min(3600, max(60, int(retry))) if retry.isascii() and retry.isdecimal() and len(retry) < 6 else 60
-            return 'Slack rate limited', delay
-        return 'Slack HTTP ' + str(exc.code), 300 if exc.code >= 500 else 3600
+            return provider + ' rate limited', delay
+        return provider + ' HTTP ' + str(exc.code), 300 if exc.code >= 500 else 3600
     except (URLError, OSError, ValueError):
-        return 'Slack network or TLS failure', 120
+        return provider + ' network or TLS failure', 120
 
 
 FAST_EVENTS = set(ACTIVITY_EVENTS) | {'locked_accounts'}
@@ -75,7 +87,7 @@ def evaluate(config, state, snapshot, facts, now, *, activity_only=False):
         return True
 
     if config.get('test_id') and state.get('test_id') != config['test_id']:
-        if enqueue('test:' + config['test_id'], '🧪 Slack Test · Requested by an administrator'):
+        if enqueue('test:' + config['test_id'], '🧪 Webhook Test · Requested by an administrator'):
             state['test_id'] = config['test_id']
     if not config.get('enabled'):
         return

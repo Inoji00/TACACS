@@ -86,7 +86,13 @@ v1.1.4 giữ 37 migration của bản v1.0 đã phát hành. Xem UPGRADE.vi.md �
 Xác thực mật khẩu TACACS+ khóa tài khoản ngay lần sai liên tiếp thứ 4. Bộ đếm thuộc tài khoản và được lưu xuyên các kết nối SSH và thiết bị trong tenant. Xác thực mật khẩu thành công đặt lại bộ đếm. Tài khoản bị khóa cũng bị từ chối đăng nhập Web. Quản trị viên có quyền có thể mở khóa trong Users. Khi nghiệm thu switch, kiểm tra bốn lần nhập sai được gửi đến TNAC+ và trạng thái Locked.
 
 
-## Cảnh báo Slack
+## Cảnh báo qua webhook
+
+Chọn một đích nhận bằng URL webhook trong trang Cảnh báo. Slack hiện có tiếp tục dùng URL `hooks.slack.com`. Với Mattermost, tạo Incoming Webhook ở kênh cần nhận và dùng URL HTTPS dạng `https://mattermost.example.com/hooks/<secret>`. TNAC+ xác định nền tảng từ URL.
+
+Trước khi dùng Mattermost, quản trị viên Ubuntu đặt `TNAC_MATTERMOST_HOST` thành tên DNS tin cậy trong cấu hình systemd của cả `tnac-alerts.service` và `tnac-snapshot.service`. Host gửi sẽ chỉ kết nối đến đúng tên đã duyệt trên HTTPS và xác minh chứng chỉ. Sau khi thay đổi systemd, reload cấu hình, khởi động lại tiến trình cảnh báo và gửi thử từ Web Admin. URL webhook chỉ nhập vào ô mật khẩu trong Web Admin.
+
+Lưu cấu hình webhook đặt lại mốc giám sát và hàng đợi theo cơ chế hiện có. Hãy kiểm tra mục cảnh báo đang chờ trước khi chuyển đích.
 
 Mở System Administration → Alerts bằng tài khoản có quyền users.manage. Tạo Slack App, bật Incoming Webhooks, chọn kênh nhận rồi nhập webhook trực tiếp vào TNAC+. Lưu trước khi bấm Send test alert. Tin thử được xếp hàng và thường gửi trong vài giây khi tiến trình hoạt động nhanh đã bật. Bấm Refresh để xem trạng thái gửi.
 

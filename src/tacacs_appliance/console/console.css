@@ -1211,7 +1211,7 @@ main.login-page #login-panel form > button:hover { background: #9fe5fa; }
 .workspace .device-syslog-filters label { min-width: 0; }
 .workspace .device-syslog-filters button { justify-self: start; }
 .device-syslog-table { overflow: auto; }
-.device-syslog-table table { width: 100%; min-width: 58rem; table-layout: fixed; }
+.device-syslog-table table { width: 100%; min-width: 48rem; table-layout: fixed; }
 .device-syslog-table th,
 .device-syslog-table td {
   overflow: hidden;
@@ -1219,12 +1219,24 @@ main.login-page #login-panel form > button:hover { background: #9fe5fa; }
   overflow-wrap: normal;
   white-space: nowrap;
 }
-.device-syslog-table th:nth-child(1) { width: 11rem; }
+.device-syslog-table th:nth-child(1) { width: 10rem; }
 .device-syslog-table th:nth-child(2) { width: 8rem; }
-.device-syslog-table th:nth-child(3) { width: 13rem; }
-.device-syslog-table th:nth-child(4) { width: 10rem; }
-.device-syslog-message { overflow-x: auto; white-space: pre; }
-.device-syslog-message:focus-visible { outline-offset: -2px; }
+.device-syslog-table th:nth-child(3) { width: 9rem; }
+.device-syslog-message summary { cursor: pointer; }
+.device-syslog-message summary span {
+  display: inline-block;
+  max-width: calc(100% - 1.25em);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+.device-syslog-message summary:focus-visible { outline-offset: -2px; }
+.device-syslog-message pre {
+  margin: .5rem 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+}
 
 .device-syslog-profiles { margin-block: 1rem; }
 .device-syslog-profiles summary { cursor: pointer; font-weight: 600; }

@@ -86,7 +86,9 @@ v1.1.4 uses the same 37 migrations as the published v1.0 release. See UPGRADE.md
 TACACS+ password authentication locks an account on its fourth consecutive wrong password. The counter belongs to the account and persists across SSH connections and devices in the tenant. A successful password authentication resets the counter. Account lockout also prevents Web sign-in for that identity. An authorized administrator can unlock it in Users. Confirm four rejected password attempts and the Locked status on the target switch during acceptance testing.
 
 
-## Slack alerts
+## Webhook alerts
+
+Configure one Slack or Mattermost Incoming Webhook in Alerts. Before selecting Mattermost, set `TNAC_MATTERMOST_HOST` to the trusted DNS name in systemd drop-ins for both `tnac-alerts.service` and `tnac-snapshot.service`. Reload systemd and restart the alert worker. The Ubuntu worker verifies HTTPS certificates and sends Mattermost alerts only to the approved host. Enter the webhook URL in Web Admin and use the test alert to verify delivery.
 
 Open System Administration → Alerts as an administrator with users.manage. Create a Slack app, enable Incoming Webhooks, authorize the channel, and enter the webhook in TNAC+. Save before selecting Send test alert. Tests are queued and normally sent within a few seconds when the fast activity service is enabled. Refresh to check delivery status.
 

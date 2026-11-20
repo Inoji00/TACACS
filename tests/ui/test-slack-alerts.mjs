@@ -17,7 +17,7 @@ let dictionary, panelSource;
 const translations = [];
 function visit(node) {
   if (ts.isFunctionDeclaration(node) && node.name?.text === 'SlackAlertsPanel') panelSource = node.getText(syntax);
-  if (ts.isObjectLiteralExpression(node) && node.properties.some(item => item.name?.getText(syntax) === '"Slack alerts"')) {
+  if (ts.isObjectLiteralExpression(node) && node.properties.some(item => item.name?.getText(syntax) === '"Webhook alerts"')) {
     dictionary = new Function(`return (${node.getText(syntax)})`)();
   }
   ts.forEachChild(node, visit);
@@ -38,8 +38,8 @@ for (const label of translations) {
 }
 const en = renderToStaticMarkup(React.createElement(Panel, {hooks,jsx,jsxs,t:value=>value}));
 const vi = renderToStaticMarkup(React.createElement(Panel, {hooks,jsx,jsxs,t:value=>dictionary[value]??value}));
-assert.match(en, /Slack alerts/);
-assert.match(vi, /Cảnh báo Slack/);
+assert.match(en, /Webhook alerts/);
+assert.match(vi, /Cảnh báo qua webhook/);
 assert.match(en, /type="password"/);
 assert.match(en, /&lt;script&gt;sample&lt;\/script&gt;/);
 assert.doesNotMatch(en, /value="https:\/\/hooks/);
@@ -49,7 +49,7 @@ assert.match(en, /Recorded device commands/);
 assert.match(en, /Audited Web actions/);
 assert.match(vi, /Lệnh thiết bị được ghi nhận/);
 assert.match(en, /No recent monitor check/);
-assert.match(vi, /Bật giám sát qua Slack/);
+assert.match(vi, /Bật cảnh báo qua webhook/);
 assert.match(source, /\["alerts","Alerts"\]/);
 assert.match(source, /P==="alerts"&&\(0,X.jsx\)\(SlackAlertsPanel/);
 console.log('PASS: actual bundled Slack panel renders English and Vietnamese, hides webhook, escapes input and exposes delivery status');

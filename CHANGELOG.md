@@ -2,6 +2,10 @@
 
 **English** · [Tiếng Việt](CHANGELOG.vi.md)
 
+## Unreleased
+
+- Add Mattermost as an alternative webhook destination to Slack. The Linux worker sends Mattermost alerts only to an administrator-approved DNS hostname.
+
 ## v1.1.4 — 2026-11-20
 
 - Add inline icons by event type. Limit TACACS+ activity queued for Slack to five events per device IP and event type per rolling 60 seconds. Audit records remain available.

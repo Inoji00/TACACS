@@ -15,12 +15,20 @@ DEFAULTS = dict(enabled=False, name='TNAC+', events=list(EVENTS[:4]), cpu_percen
                 memory_percent=90, disk_percent=85, resource_seconds=300,
                 failure_threshold=10, repeat_seconds=1800)
 
+MATTERMOST_URL = re.compile(
+    r'https://(?P<host>(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+'
+    r'[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?)/hooks/[A-Za-z0-9_-]{16,128}'
+)
+
 
 def validate_webhook(value):
-    if not isinstance(value, str) or not re.fullmatch(
-            r'https://hooks\.slack\.com/services/T[A-Za-z0-9]+/B[A-Za-z0-9]+/[A-Za-z0-9_-]{16,128}', value):
-        raise ValueError('invalid Slack webhook')
-    return value
+    if isinstance(value, str) and len(value) <= 400:
+        if re.fullmatch(r'https://hooks\.slack\.com/services/T[A-Za-z0-9]+/B[A-Za-z0-9]+/[A-Za-z0-9_-]{16,128}', value):
+            return value
+        match = MATTERMOST_URL.fullmatch(value)
+        if match and len(match['host']) <= 253 and match['host'] != 'hooks.slack.com':
+            return value
+    raise ValueError('invalid alert webhook')
 
 
 class AlertStorage:
@@ -110,13 +118,13 @@ class AlertStorage:
             previous = self.read_file('settings.json', {})
             webhook = values.get('webhook_url', '')
             if not isinstance(webhook, str):
-                raise ValueError('invalid Slack webhook')
+                raise ValueError('invalid alert webhook')
             if webhook:
                 validate_webhook(webhook)
             else:
                 webhook = previous.get('webhook_url', '')
             if values['enabled'] and not webhook:
-                raise ValueError('Slack webhook required')
+                raise ValueError('alert webhook required')
             updated = {key: values[key] for key in DEFAULTS}
             updated.update(name=name.strip(), webhook_url=webhook, revision=uuid4().hex)
             self.write_file('settings.json', updated)
