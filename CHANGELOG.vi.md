@@ -2,7 +2,13 @@
 
 [English](CHANGELOG.md) · **Tiếng Việt**
 
-## Chưa phát hành
+## v1.1.4 — 20/11/2026
+
+- Thêm biểu tượng đầu dòng theo loại cảnh báo. Giới hạn hàng đợi Slack ở 5 sự kiện TACACS+ cho mỗi IP thiết bị và loại sự kiện trong cửa sổ trượt 60 giây. Nhật ký audit vẫn lưu đầy đủ.
+- Rút gọn tag mặc định của image cập nhật Syslog thành `tnac:syslog`.
+- Cập nhật dữ liệu mẫu kiểm thử PostgreSQL theo chính sách mật khẩu mới.
+
+- Rút gọn cảnh báo Slack bằng tiếng Anh. Gửi riêng tin đăng nhập, đăng xuất, khóa tài khoản và cảnh báo vận hành. Gộp các hoạt động TACACS+ còn lại theo user và thiết bị trong cùng lượt đọc.
 
 - Khôi phục mật khẩu admin khởi tạo bằng `tnac reset-admin` trong terminal root riêng. Thu hồi phiên Web hiện có và giữ MFA.
 

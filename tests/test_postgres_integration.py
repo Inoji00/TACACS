@@ -588,17 +588,17 @@ class PostgresIntegrationTests(unittest.TestCase):
             token=sessions.create_password_only(str(user))
             failing=AdminPasswordChange(pool,str(tenant),Mock(side_effect=RuntimeError('audit unavailable')))
             with self.assertRaises(RuntimeError):
-                failing.change(str(user),'integration-password','replacement-password')
+                failing.change(str(user),'integration-password','Replacement-test-42!')
             self.assertIsNotNone(sessions.resolve(token))
             writer=PostgresAuditWriter(pool,str(tenant))
             service=AdminPasswordChange(pool,str(tenant),writer.append_in_transaction)
             with self.assertRaises(PermissionError):
-                service.change(str(user),'wrong-password','replacement-password')
-            service.change(str(user),'integration-password','replacement-password')
+                service.change(str(user),'wrong-password','Replacement-test-42!')
+            service.change(str(user),'integration-password','Replacement-test-42!')
             self.assertIsNone(sessions.resolve(token))
             with pool.connection() as connection:
                 stored=connection.execute('SELECT password_hash FROM users WHERE id=%s',(user,)).fetchone()[0]
-            self.assertTrue(PasswordHasher().verify(stored,'replacement-password'))
+            self.assertTrue(PasswordHasher().verify(stored,'Replacement-test-42!'))
 
     def test_inventory_uses_restricted_role_and_never_crosses_tenants(self):
         from tacacs_appliance.admin_inventory import AdminInventory

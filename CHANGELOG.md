@@ -2,7 +2,13 @@
 
 **English** · [Tiếng Việt](CHANGELOG.vi.md)
 
-## Unreleased
+## v1.1.4 — 2026-11-20
+
+- Add inline icons by event type. Limit TACACS+ activity queued for Slack to five events per device IP and event type per rolling 60 seconds. Audit records remain available.
+- Shorten the default Syslog update image tag to `tnac:syslog`.
+- Update PostgreSQL regression fixtures for the stronger password policy.
+
+- Format Slack notifications as concise English lines. Send login, logout, account lock and operational alerts separately. Group other TACACS+ activity for the same user and device within one poll.
 
 - Recover the installation administrator from a private root terminal with `tnac reset-admin`. Password reset invalidates existing Web sessions and preserves MFA.
 

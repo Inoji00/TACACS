@@ -12,41 +12,83 @@ def label(value, limit=100):
     return ''.join(c for c in value if c.isprintable() and c not in '\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069')[:limit]
 
 
+def login_line(kind, result, user, context, target=None):
+    icon = '✅' if result == 'Success' else '❌'
+    fields = [f'{icon} {kind} Login {result}', 'User: ' + label(user, 253)]
+    if remote := audit_ip(context.get('remote_address')):
+        fields.append('Source: ' + remote)
+    if target is not None:
+        fields.append('Switch: ' + label(target))
+    return ' · '.join(fields)
+
+
+ACCOUNTING_LABELS = {
+    'accounting.start': '▶️ Session Started',
+    'accounting.stop': '🚪 Session Ended',
+    'accounting.watchdog': '🔄 Session Updated',
+}
+
+
 def project(row, records, events):
     sequence, occurred, actor, source, action, target, result, context, actor_name = row
     context = context if isinstance(context, dict) else {}
-    user = safe_attempted_username(context.get('attempted_username')) or actor_name or actor
+    known_user = safe_attempted_username(context.get('attempted_username')) or actor_name
+    user = known_user or actor
     text = None
-    prefix = '#' + str(sequence) + ' '
+    activity_group = None
+    device_ip = audit_ip(target)
+    category = None
     if source == 'tacacs' and action == 'aaa.authentication' and result == 'pass':
         if 'successful_logins' in events:
-            remote = audit_ip(context.get('remote_address'))
-            text = 'AUTHENTICATION PASS — ' + label(user, 253) + ' → ' + label(target)
-            if remote:
-                text += ' | Remote: ' + remote
-    elif action in ('accounting.start', 'accounting.stop', 'accounting.watchdog'):
+            text = login_line('Switch', 'Success', user, context, target)
+            category = 'login-success'
+    elif action in ACCOUNTING_LABELS:
+        category = action
         record_id = context.get('accounting_record_id')
         record = records.get(record_id) if isinstance(record_id, str) else None
         if record is not None:
             username, device, arguments = record
+            device_ip = audit_ip(device) or device_ip
             details = accounting_details(arguments)
+            if action != 'accounting.stop' or details['kind'] in ('command', 'redacted') or details.get('redacted'):
+                activity_group = (safe_attempted_username(username), audit_ip(device))
             if details['kind'] in ('command', 'redacted') or details.get('redacted'):
                 if 'command_accounting' in events:
+                    category = 'command'
                     command = 'Sensitive command hidden' if details.get('redacted') else details.get('command') or 'Command unavailable'
-                    text = 'COMMAND ' + action.split('.')[1] + ' — ' + label(username, 253) + ' → ' + label(device) + ' | ' + label(command, 2048)
+                    text = f'⌨️ Command Recorded · User: {label(username, 253)} · Switch: {label(device)} · {label(command, 2048)}'
             elif 'aaa_activity' in events:
-                text = 'ACCOUNTING ' + action.split('.')[1] + ' — ' + label(username) + ' → ' + label(device)
+                text = f'{ACCOUNTING_LABELS[action]} · User: {label(username)} · Switch: {label(device)}'
         elif 'aaa_activity' in events:
-            text = action + ' — ' + label(actor) + ' → ' + label(target) + ' | Command details unavailable'
+            text = f'🧾 Accounting {action.split(".")[1].title()} · Switch: {label(target)} · Details unavailable'
     elif source == 'tacacs':
         if 'aaa_activity' in events and action != 'aaa.accounting' and result not in ('challenge', 'restart'):
-            text = action + ' ' + label(result) + ' — ' + label(user) + ' → ' + label(target)
-            if remote := audit_ip(context.get('remote_address')):
-                text += ' | Remote: ' + remote
+            if action == 'aaa.authentication' and result == 'fail':
+                category = 'login-fail'
+                text = login_line('Switch', 'Failed', user, context, target)
+            else:
+                category = action if action in ('aaa.authentication', 'aaa.authorization') else 'aaa.other'
+                if action != 'aaa.authentication':
+                    activity_group = (known_user, audit_ip(target))
+                name = {'aaa.authorization': 'Authorization', 'aaa.authentication': 'Authentication'}.get(action, label(action))
+                outcome = {'allow': 'Allowed', 'deny': 'Denied'}.get(result, label(result).title())
+                icon = {'allow': '🛡️', 'deny': '⛔'}.get(result, '🔐')
+                text = f'{icon} {name} {outcome} · User: {label(user)} · Switch: {label(target)}'
+                if remote := audit_ip(context.get('remote_address')):
+                    text += ' · Source: ' + remote
     elif 'web_activity' in events and source.startswith('admin-'):
         # Do not forward arbitrary targets, raw contexts or request bodies.
-        text = 'WEB ' + label(action) + ' ' + label(result) + ' — ' + label(user)
-    return {'sequence': sequence, 'text': prefix + text if text else None, 'time': occurred.timestamp()}
+        if action == 'web.login' and result in ('success', 'fail'):
+            text = login_line('Web', 'Success' if result == 'success' else 'Failed', user, context)
+        elif action == 'web.logout':
+            text = f'🚪 Web Logout · User: {label(user)}'
+        else:
+            text = f'🌐 Web Activity · {label(action)} · {label(result).title()} · User: {label(user)}'
+    event = {'sequence': sequence, 'text': text, 'time': occurred.timestamp(),
+             'group': activity_group if activity_group and all(activity_group) else None}
+    if text and category:
+        event['aaa_rate_key'] = f'{device_ip or "unknown"}/{category}'
+    return event
 
 
 def read_activity(connection, tenant, after, events):

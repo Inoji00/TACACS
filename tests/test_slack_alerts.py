@@ -61,18 +61,18 @@ class SlackMonitorTests(unittest.TestCase):
         self.cycle(1000, bad)
         self.sender.assert_not_called()
         self.cycle(1060, bad)
-        self.assertIn('WARNING', self.sender.call_args.args[1])
+        self.assertIn('Warning', self.sender.call_args.args[1])
         self.cycle(1120, bad)
         self.assertEqual(self.sender.call_count, 1)
         self.cycle(1180)
-        self.assertIn('RECOVERED', self.sender.call_args.args[1])
+        self.assertIn('Recovered', self.sender.call_args.args[1])
         self.assertEqual(self.sender.call_count, 2)
 
     def test_reminder_requires_configured_interval(self):
         for now in range(1000, 2981, 60):
             self.cycle(now, {'services': {'app': 'exited'}})
         self.assertEqual(self.sender.call_count, 2)
-        self.assertIn('REMINDER', self.sender.call_args.args[1])
+        self.assertIn('Reminder', self.sender.call_args.args[1])
 
     def test_resource_threshold_requires_sustained_duration(self):
         for now in range(1000, 1300, 60):
@@ -104,11 +104,11 @@ class SlackMonitorTests(unittest.TestCase):
     def test_account_baseline_new_lock_and_unlock(self):
         self.cycle(1000, facts={'locked': {}, 'failures': 0})
         self.cycle(1060, facts={'locked': {'example': 'test-user'}, 'failures': 0})
-        self.assertIn('Account locked: test-user', self.sender.call_args.args[1])
+        self.assertIn('Account Locked · test-user', self.sender.call_args.args[1])
         self.cycle(1120, facts={'locked': {'example': 'test-user'}, 'failures': 0})
         self.assertEqual(self.sender.call_count, 1)
         self.cycle(1180, facts={'locked': {}, 'failures': 0})
-        self.assertIn('no longer locked', self.sender.call_args.args[1])
+        self.assertIn('Account No Longer Locked', self.sender.call_args.args[1])
 
     def test_unavailable_account_facts_do_not_infer_unlock(self):
         self.cycle(1000, facts={'locked': {'example': 'test-user'}, 'failures': 0})
@@ -120,21 +120,21 @@ class SlackMonitorTests(unittest.TestCase):
         facts = {'locked': {}, 'failures': 10}
         self.cycle(1000, facts=facts)
         self.cycle(1060, facts=facts)
-        self.assertIn('10 failed TACACS+', self.sender.call_args.args[1])
+        self.assertIn('10 attempts in 5 min', self.sender.call_args.args[1])
         self.cycle(1120, facts={'locked': {}, 'failures': 0})
-        self.assertIn('RECOVERED', self.sender.call_args.args[1])
+        self.assertIn('Recovered', self.sender.call_args.args[1])
 
     def test_test_alert_can_send_while_automatic_alerting_disabled(self):
         self.storage.files['settings.json'].update(enabled=False, test_id='example')
         self.cycle(1000)
-        self.assertIn('TEST', self.sender.call_args.args[1])
+        self.assertIn('Slack Test', self.sender.call_args.args[1])
         self.cycle(1060)
         self.assertEqual(self.sender.call_count, 1)
 
     def test_host_snapshot_failure_can_be_sent_without_database(self):
         self.cycle(1000, {'snapshot_error': True})
         self.cycle(1060, {'snapshot_error': True})
-        self.assertIn('Host monitoring snapshot failed', self.sender.call_args.args[1])
+        self.assertIn('Host Monitoring · Snapshot', self.sender.call_args.args[1])
 
 
 class SlackStorageTests(unittest.TestCase):

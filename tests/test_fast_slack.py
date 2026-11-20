@@ -29,7 +29,7 @@ class FastSlackTests(unittest.TestCase):
         self.assertEqual(state['locked_accounts'],{'example':'test-user'})
         self.assertEqual(state['event_cursor'],6)
         self.assertIn('AUTHENTICATION PASS',sender.call_args.args[1])
-        self.assertNotIn('RECOVERED',sender.call_args.args[1])
+        self.assertNotIn('Recovered',sender.call_args.args[1])
 
     def test_fast_collector_requests_only_activity_groups(self):
         config=configuration()
@@ -61,11 +61,11 @@ class FastSlackTests(unittest.TestCase):
                     now=now,sender=sender,activity_only=True)
         poll(1000,{})
         poll(1003,{'example':'test-user'})
-        self.assertIn('Account locked: test-user',sender.call_args.args[1])
+        self.assertIn('Account Locked · test-user',sender.call_args.args[1])
         poll(1006,{'example':'test-user'})
         self.assertEqual(sender.call_count,1)
         poll(1009,{})
-        self.assertIn('no longer locked',sender.call_args.args[1])
+        self.assertIn('Account No Longer Locked',sender.call_args.args[1])
         self.assertEqual(sender.call_count,2)
 
     def test_health_query_without_account_facts_cannot_emit_unlock(self):
@@ -85,7 +85,7 @@ class FastSlackTests(unittest.TestCase):
         sender=Mock(return_value=(None,0))
         process(storage,{}, {'locked':{'example':'test-user'},'failures':0,
                             'checked_events':['locked_accounts']},now=1000,sender=sender,activity_only=True)
-        self.assertIn('Account locked: test-user',sender.call_args.args[1])
+        self.assertIn('Account Locked · test-user',sender.call_args.args[1])
 
     def test_worker_waits_for_remaining_three_second_interval(self):
         with tempfile.TemporaryDirectory() as temporary:

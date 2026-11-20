@@ -25,10 +25,18 @@ class SlackActivityProjectionTests(unittest.TestCase):
         event = row(context={'attempted_username':'example-user','remote_address':'192.0.2.20','password':'DO_NOT_SEND'})
         self.assertIsNone(project(event, {}, [])['text'])
         text = project(event, {}, ['successful_logins'])['text']
-        self.assertIn('AUTHENTICATION PASS', text)
+        self.assertIn('Switch Login Success', text)
         self.assertIn('example-user', text)
         self.assertIn('192.0.2.20', text)
         self.assertNotIn('DO_NOT_SEND', text)
+
+    def test_only_subscribed_login_results_get_compact_format(self):
+        denied = row(result='fail')
+        self.assertIsNone(project(denied, {}, ['successful_logins'])['text'])
+        self.assertEqual(project(denied, {}, ['aaa_activity'])['text'],
+                         '❌ Switch Login Failed · User: example-user · Source: 192.0.2.20 · Switch: 192.0.2.10')
+        web = row(source='admin-web', action='web.login', result='success', context={}, actor_name='admin')
+        self.assertEqual(project(web, {}, ['web_activity'])['text'], '✅ Web Login Success · User: admin')
 
     def test_commands_use_exact_accounting_record_and_redaction(self):
         identifier = str(UUID(int=1))
@@ -59,7 +67,7 @@ class SlackActivityProjectionTests(unittest.TestCase):
     def test_aaa_decisions_and_session_events_have_separate_subscription(self):
         event = row(action='aaa.authorization',result='deny')
         self.assertIsNone(project(event, {}, ['successful_logins'])['text'])
-        self.assertIn('deny', project(event, {}, ['aaa_activity'])['text'])
+        self.assertIn('Authorization Denied', project(event, {}, ['aaa_activity'])['text'])
         self.assertIsNone(project(row(result='challenge'), {}, ['aaa_activity'])['text'])
 
     def test_initial_cursor_starts_at_committed_sequence(self):
@@ -114,6 +122,51 @@ class SlackActivityCursorTests(unittest.TestCase):
         self.cycle(1120,[event],6)
         self.assertEqual(len(self.storage.files['state.json']['pending']),1)
         self.assertEqual(self.sender.call_count,1)
+
+    def test_login_delivery_has_one_line_without_repeated_metadata(self):
+        self.cycle(1000, [], 5)
+        event = project(row(sequence=6), {}, ['successful_logins'])
+        self.cycle(1060, [event], 6)
+        self.assertEqual(self.sender.call_args.args[1],
+                         '✅ Switch Login Success · User: example-user · Source: 192.0.2.20 · Switch: 192.0.2.10')
+
+    def test_aaa_rate_limit_is_per_device_and_category_and_expires(self):
+        self.cycle(1000, [], 5)
+        events = [project(row(sequence=n), {}, ['successful_logins']) for n in range(6, 12)]
+        events += [
+            project(row(sequence=12, target='192.0.2.11'), {}, ['successful_logins']),
+            project(row(sequence=13, result='fail'), {}, ['aaa_activity']),
+        ]
+        self.cycle(1003, events, 13)
+        state = self.storage.files['state.json']
+        self.assertEqual(state['event_cursor'], 13)
+        self.assertEqual([event['key'] for event in state['pending']],
+                         ['activity:7', 'activity:8', 'activity:9', 'activity:10', 'activity:12', 'activity:13'])
+        self.cycle(1063, [project(row(sequence=14), {}, ['successful_logins'])], 14)
+        self.assertIn('activity:14', [event['key'] for event in self.storage.files['state.json']['pending']])
+
+    def test_groups_device_activity_and_sends_independent_events_separately(self):
+        self.cycle(1000, [], 5)
+        config = self.storage.files['settings.json']
+        config['test_id'] = 'test-id'
+        identifier = str(UUID(int=9))
+        records = {identifier: ('example-user', '192.0.2.10', ['service=shell'])}
+        events = [
+            project(row(sequence=6), {}, ['successful_logins']),
+            project(row(sequence=7, action='aaa.authorization', result='allow'), {}, ['aaa_activity']),
+            project(row(sequence=8, action='accounting.start', context={'accounting_record_id':identifier}),
+                    records, ['aaa_activity']),
+            project(row(sequence=9, action='accounting.stop', context={'accounting_record_id':identifier}),
+                    records, ['aaa_activity']),
+        ]
+        self.cycle(1003, events, 9)
+        self.assertEqual(self.sender.call_args.args[1], '🧪 Slack Test · Requested by an administrator')
+        self.cycle(1006, [], 9)
+        self.assertEqual(self.sender.call_args.args[1], events[0]['text'])
+        self.cycle(1009, [], 9)
+        self.assertEqual(self.sender.call_args.args[1].splitlines(), [events[1]['text'], events[2]['text']])
+        self.cycle(1012, [], 9)
+        self.assertEqual(self.sender.call_args.args[1], events[3]['text'])
 
     def test_full_queue_keeps_cursor_for_later_replay(self):
         self.cycle(1000,[],5)

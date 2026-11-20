@@ -1,5 +1,5 @@
 """Bounded Slack delivery from the Ubuntu host, independent of application health."""
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 import hashlib
 import json
 import math
@@ -45,6 +45,9 @@ def send_slack(webhook, text):
 
 
 FAST_EVENTS = set(ACTIVITY_EVENTS) | {'locked_accounts'}
+AAA_RATE_LIMIT = 5
+AAA_RATE_WINDOW = 60
+AAA_RATE_KEYS = 512
 
 
 def safe_name(value):
@@ -56,13 +59,15 @@ def evaluate(config, state, snapshot, facts, now, *, activity_only=False):
     pending = state.setdefault('pending', [])
     conditions = state.setdefault('conditions', {})
 
-    def enqueue(key, text, occurred=None):
+    def enqueue(key, text, occurred=None, *, batch=None):
         if any(event['key'] == key for event in pending):
             return True
         if len(pending) >= 100:
             state['last_error'] = 'Alert queue full'
             return False
         event = {'key': key, 'text': text, 'time': now if occurred is None else occurred, 'next_attempt': now, 'attempts': 0}
+        if batch is not None:
+            event['batch'] = batch
         if len(json.dumps([*pending, event])) > 65536:
             state['last_error'] = 'Alert queue full'
             return False
@@ -70,7 +75,7 @@ def evaluate(config, state, snapshot, facts, now, *, activity_only=False):
         return True
 
     if config.get('test_id') and state.get('test_id') != config['test_id']:
-        if enqueue('test:' + config['test_id'], 'TEST — Slack connection test requested by a TNAC+ administrator.'):
+        if enqueue('test:' + config['test_id'], '🧪 Slack Test · Requested by an administrator'):
             state['test_id'] = config['test_id']
     if not config.get('enabled'):
         return
@@ -82,9 +87,9 @@ def evaluate(config, state, snapshot, facts, now, *, activity_only=False):
         accepted = True
         if previous is not None:
             for kind, changed, label in (
-                ('locked', {key: value for key, value in locked.items() if key not in previous}, 'WARNING — Account locked: '),
+                ('locked', {key: value for key, value in locked.items() if key not in previous}, '🔒 Account Locked · '),
                 ('unlocked', {key: value for key, value in previous.items() if key not in locked},
-                 'RECOVERED — Account is no longer locked or was removed: '),
+                 '🔓 Account No Longer Locked · '),
             ):
                 if changed:
                     digest = hashlib.sha256(json.dumps(sorted(changed)).encode()).hexdigest()[:32]
@@ -95,40 +100,61 @@ def evaluate(config, state, snapshot, facts, now, *, activity_only=False):
             state['locked_accounts'] = {identifier: safe_name(name)[:32] for identifier, name in locked.items()}
 
     if facts is not None and 'activity' in facts:
+        recent = {}
+        for key, times in state.get('aaa_rate', {}).items():
+            active = [stamp for stamp in times if stamp > now - AAA_RATE_WINDOW]
+            if active:
+                recent[key] = active
+        state['aaa_rate'] = recent
         state['activity_backlog'] = facts.get('activity_more', False)
         if 'event_cursor' not in state:
             state['event_cursor'] = facts['activity_cursor']
         else:
+            batch = state['event_cursor']
             for event in facts['activity']:
                 if event['sequence'] <= state['event_cursor']:
                     continue
-                if event['text'] and not enqueue('activity:' + str(event['sequence']), event['text'], event['time']):
+                rate_key = event.get('aaa_rate_key')
+                if rate_key and (len(recent.get(rate_key, ())) >= AAA_RATE_LIMIT
+                                 or (rate_key not in recent and len(recent) >= AAA_RATE_KEYS)):
+                    state['event_cursor'] = event['sequence']
+                    continue
+                group = event.get('group')
+                if event['text'] and not enqueue('activity:' + str(event['sequence']), event['text'], event['time'],
+                                                 batch=f'{batch}:{json.dumps(group)}' if group else None):
                     state['activity_backlog'] = True
                     break
+                if event['text'] and rate_key:
+                    recent.setdefault(rate_key, []).append(now)
                 state['event_cursor'] = event['sequence']
 
     if activity_only:
         return
 
-    observations = {'monitor.snapshot': (bool(snapshot.get('snapshot_error')), 'Host monitoring snapshot failed', 0)}
+    observations = {'monitor.snapshot': (bool(snapshot.get('snapshot_error')), 'Host Monitoring · Snapshot', 0)}
     if not snapshot.get('snapshot_error'):
         if 'services' in config['events']:
+            service_names = {'app': 'TACACS+', 'admin': 'Web Admin', 'proxy': 'HTTPS Proxy', 'postgres': 'PostgreSQL'}
             for service, status in snapshot.get('services', {}).items():
-                if service in ('app', 'admin', 'proxy', 'postgres'):
-                    observations['service.' + service] = (status not in ('healthy', 'running'), service + ' status: ' + safe_name(status), 0)
+                if service in service_names:
+                    observations['service.' + service] = (
+                        status not in ('healthy', 'running'), f'Service · {service_names[service]} · {safe_name(status)}', 0)
             for key, label in (('tcp_probe', 'TACACS+ TCP/49'), ('https_probe', 'Web HTTPS')):
                 if type(snapshot.get(key)) is bool:
-                    observations[key] = (not snapshot[key], label + ' readiness check', 0)
+                    observations[key] = (not snapshot[key], 'Readiness · ' + label, 0)
         if 'resources' in config['events']:
+            names = {'cpu_percent': 'CPU', 'memory_percent': 'Memory', 'disk_percent': 'Disk'}
             for key, value in snapshot.get('system', {}).items():
-                if key in ('cpu_percent', 'memory_percent', 'disk_percent') and type(value) in (int, float) and math.isfinite(value):
-                    observations[key] = (value >= config[key], key + ': ' + str(round(value, 1)) + '%', config['resource_seconds'])
+                if key in names and type(value) in (int, float) and math.isfinite(value):
+                    limit = config[key]
+                    observations[key] = (value >= limit, f'{names[key]} · {value:.1f}% · Threshold: {limit}%',
+                                         config['resource_seconds'])
     if facts is not None:
         state['facts_available'] = True
         if 'authentication_failures' in config['events']:
             count = facts['failures']
             observations['authentication_failures'] = (
-                count >= config['failure_threshold'], str(count) + ' failed TACACS+ authentications in the last 5 minutes', 0)
+                count >= config['failure_threshold'], f'TACACS+ Login Failures · {count} attempts in 5 min', 0)
     elif 'authentication_failures' in config['events']:
         state['facts_available'] = False
 
@@ -142,10 +168,10 @@ def evaluate(config, state, snapshot, facts, now, *, activity_only=False):
             repeat = now - condition.get('last_queued', 0) >= config['repeat_seconds']
             if ready and (not condition['active'] or repeat):
                 kind = 'REMINDER' if condition['active'] else 'WARNING'
-                if enqueue(key + ':open', kind + ' — ' + detail):
+                if enqueue(key + ':open', ('🔔 ' if kind == 'REMINDER' else '⚠️ ') + kind.title() + ' · ' + detail):
                     condition.update(active=True, last_queued=now)
         else:
-            if condition['active'] and enqueue(key + ':recovered', 'RECOVERED — ' + detail):
+            if condition['active'] and enqueue(key + ':recovered', '🟢 Recovered · ' + detail):
                 condition['active'] = False
             condition['count'] = 0
         condition['checked'] = now
@@ -168,23 +194,25 @@ def process(storage, snapshot, facts=None, *, now=None, sender=send_slack, activ
         if activity_only:
             state['activity_available'] = facts is not None
         evaluate(config, state, snapshot, facts, now, activity_only=activity_only)
-        stamp = datetime.fromtimestamp(now, timezone(timedelta(hours=7))).isoformat(timespec='seconds')
-        lines = [safe_name(config['name']), stamp]
+        lines = []
         selected = []
         for event in sorted(state.get('pending', []), key=lambda item: item['key'].startswith('activity:')):
             if now < state.get('delivery_not_before', 0):
                 break
             if event['next_attempt'] > now:
                 continue
-            occurred = datetime.fromtimestamp(event['time'], timezone.utc).isoformat(timespec='seconds')
             text = event['text']
             if len(text) > 2700:
                 text = text[:2670] + ' [truncated]'
-            line = text + ' [' + occurred + ']'
-            if len('\n'.join([*lines, line])) > 2900 or len(selected) >= 8:
+            if selected:
+                if selected[0].get('batch') is None:
+                    break
+                if event.get('batch') != selected[0]['batch']:
+                    continue
+            if len('\n'.join([*lines, text])) > 2900 or len(selected) >= 8:
                 break
             selected.append(event)
-            lines.append(line)
+            lines.append(text)
         if selected:
             # Persist the queue before attempting delivery so a worker crash cannot lose events.
             storage.write_file('state.json', state)
