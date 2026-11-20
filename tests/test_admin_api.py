@@ -10,6 +10,26 @@ TOKEN = "a" * 43
 
 
 class AdminApiTests(unittest.TestCase):
+    def test_syslog_profile_writes_require_csrf_and_admin(self):
+        audit = Mock()
+        self.app = AdminApi(self.sessions, self.permissions, b"k" * 32, "https://admin.local", web_audit=audit)
+        payload = b'{"action":"save","source":"192.0.2.10","name":"FW-EXAMPLE","profile":"firewall"}'
+        args = dict(PATH_INFO="/api/device-syslog/profiles", REQUEST_METHOD="POST",
+                    CONTENT_TYPE="application/json", CONTENT_LENGTH=str(len(payload)))
+        with patch("tacacs_appliance.syslog_profiles.change_profile") as change, \
+             patch("tacacs_appliance.syslog_profiles.read_profiles", return_value={}):
+            def submit(**headers):
+                return self.request(**args, **headers, **{"wsgi.input": io.BytesIO(payload)})["status"]
+            self.assertEqual(submit(), "403 Forbidden")
+            headers = dict(HTTP_ORIGIN="https://admin.local", HTTP_X_CSRF_TOKEN=self.app.csrf_token(TOKEN))
+            self.permissions.return_value = False
+            self.assertEqual(submit(**headers), "403 Forbidden")
+            change.assert_not_called()
+            self.permissions.return_value = True
+            self.assertEqual(submit(**headers), "200 OK")
+            change.assert_called_once_with(("save", "192.0.2.10", "FW-EXAMPLE", "firewall"))
+            audit.assert_called_once()
+
     def test_device_syslog_is_restricted_to_admin_and_validates_filters(self):
         path = "/api/device-syslog"
         with patch("tacacs_appliance.device_syslog.search", return_value={"items": []}) as search:

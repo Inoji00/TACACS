@@ -60,9 +60,10 @@ def ready():
         db.execute("SELECT id FROM events LIMIT 1").fetchone()
 
 
-def search(query, path=DATABASE):
-    fields = parse_qs(query, keep_blank_values=True, max_num_fields=6)
-    if not fields.keys() <= {"source", "severity", "since", "until", "q", "before"}:
+def search(query, path=DATABASE, *, profiles=None):
+    from .syslog_profiles import KINDS, read_profiles
+    fields = parse_qs(query, keep_blank_values=True, max_num_fields=7)
+    if not fields.keys() <= {"source", "severity", "since", "until", "q", "before", "profile"}:
         raise ValueError("unknown filter")
     if any(len(values) != 1 or len(values[0]) > 256 for values in fields.values()):
         raise ValueError("invalid filter")
@@ -72,6 +73,20 @@ def search(query, path=DATABASE):
     if "source" in values:
         where.append("source = ?")
         args.append(str(ipaddress.IPv4Address(values["source"])))
+    if "profile" in values and values["profile"] not in KINDS | {"unclassified"}:
+        raise ValueError("invalid profile")
+    if profiles is None:
+        profiles = read_profiles()
+    profile = values.get("profile")
+    if profile:
+        unclassified = profile == "unclassified"
+        matches = [ip for ip, item in profiles.items() if unclassified or item["profile"] == profile]
+        if matches:
+            operator = "NOT IN" if unclassified else "IN"
+            where.append(f"source {operator} ({','.join('?' for _ in matches)})")
+            args.extend(matches)
+        elif not unclassified:
+            where.append("0")
     if "severity" in values:
         if values["severity"] not in "01234567" or len(values["severity"]) != 1:
             raise ValueError("invalid severity")
@@ -101,7 +116,7 @@ def search(query, path=DATABASE):
         db.set_progress_handler(lambda: int(time.monotonic() > deadline), 1000)
         rows = db.execute("SELECT * FROM events WHERE " + " AND ".join(where)
                           + " ORDER BY id DESC LIMIT 101", args).fetchall()
-    return {"items": [{**dict(row), "received": datetime.fromtimestamp(
+    return {"items": [{**dict(row), **profiles.get(row["source"], {}), "received": datetime.fromtimestamp(
                 row["received"], timezone.utc).isoformat()} for row in rows[:100]],
             "next_before": rows[99]["id"] if len(rows) > 100 else None, "collector_ready": True}
 

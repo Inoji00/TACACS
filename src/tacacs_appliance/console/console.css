@@ -1205,6 +1205,30 @@ main.login-page #login-panel form > button:hover { background: #9fe5fa; }
 
 .device-syslog-filters { flex-wrap: wrap; }
 .device-syslog-table { overflow: auto; }
-.device-syslog-table table { min-width: 40rem; }
-.device-syslog-table td:nth-child(2) { white-space: nowrap; }
-.device-syslog-message { overflow-wrap: anywhere; white-space: pre-wrap; }
+.device-syslog-table table { width: 100%; min-width: 58rem; table-layout: fixed; }
+.device-syslog-table th,
+.device-syslog-table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-wrap: normal;
+  white-space: nowrap;
+}
+.device-syslog-table th:nth-child(1) { width: 11rem; }
+.device-syslog-table th:nth-child(2) { width: 8rem; }
+.device-syslog-table th:nth-child(3) { width: 13rem; }
+.device-syslog-table th:nth-child(4) { width: 10rem; }
+.device-syslog-message { overflow-x: auto; white-space: pre; }
+.device-syslog-message:focus-visible { outline-offset: -2px; }
+
+.device-syslog-profiles { margin-block: 1rem; }
+.device-syslog-profiles summary { cursor: pointer; font-weight: 600; }
+.device-syslog-profile-list { list-style: none; padding: 0; max-height: 14rem; overflow: auto; }
+.device-syslog-profile-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  padding: .4rem 0;
+  overflow-wrap: anywhere;
+}

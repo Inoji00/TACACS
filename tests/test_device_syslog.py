@@ -8,9 +8,28 @@ import unittest
 
 from tacacs_appliance.device_syslog import parse_message, prune, search, writer, RETENTION_SECONDS
 from tacacs_appliance.syslog_archive import refresh_archives
+from tacacs_appliance.syslog_profiles import change_profile, read_profiles, validate_change
 
 
 class DeviceSyslogTests(unittest.TestCase):
+    def test_profiles_filter_retained_records_and_removal_keeps_events(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            events, profiles = (Path(tmp) / filename for filename in ("events.db", "profiles.db"))
+            with closing(writer(events)) as db, db:
+                db.executemany("INSERT INTO events(received,source,message) VALUES (?,?,?)", [
+                    (int(time.time()), "192.0.2.10", "event before classification"),
+                    (int(time.time()), "192.0.2.11", "other switch"),
+                ])
+            change_profile(validate_change({"action":"save", "source":"192.0.2.10",
+                                            "name":"FW-EXAMPLE", "profile":"firewall"}), profiles)
+            rows = search("profile=firewall", events, profiles=read_profiles(profiles))["items"]
+            self.assertEqual([(row["source"], row["name"]) for row in rows], [("192.0.2.10", "FW-EXAMPLE")])
+            change_profile(validate_change({"action":"remove", "source":"192.0.2.10"}), profiles)
+            rows = search("profile=unclassified", events, profiles=read_profiles(profiles))["items"]
+            self.assertEqual({row["source"] for row in rows}, {"192.0.2.10", "192.0.2.11"})
+            with self.assertRaises(ValueError):
+                search("profile=unknown", events, profiles={})
+
     def test_daily_archive_backfills_escapes_and_expires(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

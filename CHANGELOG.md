@@ -2,7 +2,12 @@
 
 **English** · [Tiếng Việt](CHANGELOG.vi.md)
 
-## Unreleased
+## v1.1.3 — 2026-11-20
+
+- Enable Device Syslog automatically on fresh VM installations after checking UDP/514.
+- Label Syslog sources by IPv4 as Switch, Router or Firewall, with separate admin-managed profiles and filters for retained events.
+- Keep each Syslog record on one line, with horizontal scrolling for long messages.
+- Add a bilingual CLI guide for inspecting and filtering daily files.
 
 - Export retained Device Syslog into daily text files by source IPv4 and UTC+07 receive date. Use a short collector name and preserve the full Compose status table. Fresh installs use the `tnac-syslog` volume; upgrades retain existing logs.
 

@@ -1,4 +1,4 @@
-# TNAC+ v1.1.2
+# TNAC+ v1.1.3
 
 **English** · [Tiếng Việt](README.vi.md)
 
@@ -21,7 +21,7 @@ TNAC+ integrates Slack activity and health alerts, fast account-lock notificatio
 
 ## Fresh installation on Ubuntu
 
-Download the [installer ZIP](https://github.com/Inoji00/TACACS/releases/download/v1.1.2/TNAC-v1.1.2.zip) and [SHA-256 checksum](https://github.com/Inoji00/TACACS/releases/download/v1.1.2/TNAC-v1.1.2.zip.sha256), or clone the default branch below.
+Download the [installer ZIP](https://github.com/Inoji00/TACACS/releases/download/v1.1.3/TNAC-v1.1.3.zip) and [SHA-256 checksum](https://github.com/Inoji00/TACACS/releases/download/v1.1.3/TNAC-v1.1.3.zip.sha256), or clone the default branch below.
 
 Use an amd64 Ubuntu VM with Python 3.12 or later and venv, Docker Engine, Buildx, Compose v2, and a management IPv4 address. The VM needs Internet access to fetch base images and dependencies.
 

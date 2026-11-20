@@ -2,7 +2,12 @@
 
 [English](CHANGELOG.md) · **Tiếng Việt**
 
-## Chưa phát hành
+## v1.1.3 — 20/11/2026
+
+- Cài mới tự bật Device Syslog sau khi kiểm tra UDP/514.
+- Admin quản lý profile Switch, Router hoặc Firewall theo IPv4 nguồn và lọc cả log đang lưu.
+- Hiển thị mỗi bản ghi Syslog trên một dòng, cuộn ngang để đọc nội dung dài.
+- Bổ sung hướng dẫn CLI Anh–Việt để kiểm tra và lọc file theo ngày.
 
 - Xuất Device Syslog còn hạn thành file theo IPv4 nguồn và ngày nhận UTC+07. Dùng tên container ngắn, giữ đủ cột trạng thái Compose. Cài mới dùng volume `tnac-syslog`; nâng cấp giữ log hiện có.
 

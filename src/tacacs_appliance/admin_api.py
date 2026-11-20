@@ -190,6 +190,33 @@ class AdminApi:
                     if session["device_operator"]:
                         session["device_aaa_logs"] = self._permissions(user_id, "devices.aaa.read")
                 return respond("200 OK", session)
+            if path == "/api/device-syslog/profiles":
+                if not self._permissions(user_id, "users.manage"):
+                    return respond("403 Forbidden", {"error": "permission denied"})
+                if environ.get("QUERY_STRING"):
+                    return respond("400 Bad Request", {"error": "unexpected query"})
+                from .syslog_profiles import change_profile, read_profiles, validate_change
+                if method == "GET":
+                    return respond("200 OK", {"profiles": read_profiles()})
+                if method != "POST":
+                    return respond("405 Method Not Allowed", {"error": "method not allowed"})
+                try:
+                    length = int(environ.get("CONTENT_LENGTH", ""))
+                    if environ.get("CONTENT_TYPE") != "application/json" or not 1 <= length <= 1024:
+                        raise ValueError("invalid body")
+                    raw = environ["wsgi.input"].read(length)
+                    if len(raw) != length:
+                        raise ValueError("incomplete body")
+                    change = validate_change(json.loads(raw))
+                    if self._web_audit is None:
+                        raise RuntimeError("profile audit unavailable")
+                    self._web_audit(actor=user_id, source="admin-syslog",
+                                    action="syslog.profile." + change[0],
+                                    target=change[1], result="requested", security_context={})
+                    change_profile(change)
+                except ValueError:
+                    return respond("400 Bad Request", {"error": "invalid syslog profile"})
+                return respond("200 OK", {"profiles": read_profiles()})
             if path == "/api/device-syslog":
                 if not self._permissions(user_id, "users.manage"):
                     return respond("403 Forbidden", {"error": "permission denied"})
