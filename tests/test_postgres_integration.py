@@ -1126,6 +1126,26 @@ class PostgresIntegrationTests(unittest.TestCase):
                         connection.execute(statement, parameters)
         self.assertTrue(writer.verify())
 
+    def test_admin_recovery_revokes_session_and_keeps_mfa(self):
+        from tacacs_appliance.admin_reset import reset_admin
+
+        tenant, user = self.provision()
+        with self.pool.connection() as connection:
+            for permission in ("console.read", "users.manage"):
+                connection.execute("INSERT INTO admin_grants VALUES (%s,%s,%s)", (tenant, user, permission))
+        factor = self.session_factor(tenant, user)
+        sessions = PostgresAdminSessions(self.pool, str(tenant))
+        token = sessions.create(str(user), mfa_verified=True, factor_id=factor)
+        with self.pool.connection() as connection:
+            reset_admin(connection, tenant, user, "Recovery-test-42!")
+            self.assertTrue(connection.execute(
+                "SELECT enabled FROM mfa_factors WHERE tenant_id=%s AND id=%s", (tenant, factor)
+            ).fetchone()[0])
+            self.assertEqual(connection.execute(
+                "SELECT count(*) FROM audit_events WHERE tenant_id=%s AND action='admin.password.reset'", (tenant,)
+            ).fetchone()[0], 1)
+        self.assertIsNone(sessions.resolve(token))
+
     def test_password_change_revokes_session_without_touching_shadow_table(self):
         tenant, user = self.provision()
         with self.pool.connection() as connection:

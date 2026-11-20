@@ -3,6 +3,7 @@ import argparse
 import base64
 import ipaddress
 import json
+import os
 import re
 import socket
 import sys
@@ -218,9 +219,23 @@ def rebind_vm(directory,item,profile,server,admin,*,domain=None,tls_files=None):
         raise
 
 
+def reset_admin(directory,item):
+    if os.geteuid()!=0 or not sys.stdin.isatty() or not sys.stdout.isatty():
+        raise ValueError('private root terminal required')
+    if not item['user']:
+        raise ValueError('installation does not have a bootstrap administrator')
+    source=(local.ROOT/'src').resolve(strict=True)
+    return local.subprocess.run(local.command(directory,item)+[
+        'run','--rm','--no-deps','--pull','never','--user','0:0',
+        '-v',f'{source}:/run/tnac-src:ro','-e','PYTHONPATH=/run/tnac-src',
+        'initialize','python','-B','-m','tacacs_appliance.admin_reset',
+        '--tenant-id',item['tenant'],'--user-id',item['user'],
+    ]).returncode
+
+
 def main():
     parser=argparse.ArgumentParser(description='Linux VM TACACS+ appliance manager; preconfigure VM IP and firewall first')
-    parser.add_argument('action',choices=('init','start','status','update-web','update-audit','snapshot','monitor-resources','stop','credentials','switch-key','enroll','rebind','password-only','short-names'),
+    parser.add_argument('action',choices=('init','start','status','update-web','update-audit','snapshot','monitor-resources','stop','credentials','reset-admin','switch-key','enroll','rebind','password-only','short-names'),
                         help='status lists Compose service names, states and ports')
     server=parser.add_mutually_exclusive_group()
     server.add_argument('--server-ip')
@@ -233,7 +248,10 @@ def main():
     parser.add_argument('--ca-file',help='rebind: trusted CA PEM bundle')
     parser.add_argument('--ip-only',action='store_true',help='rebind: explicitly return to IP-based HTTPS')
     parser.add_argument('--tenant-profile',help='Separate member-company installation name')
+    parser.add_argument('--deploy-dir',type=Path,help='reset-admin: existing installation root')
     args=parser.parse_args()
+    if args.deploy_dir is not None and args.action!='reset-admin':
+        parser.error('--deploy-dir is only supported with reset-admin')
     if args.subnet is not None and args.action!='init':
         parser.error('--subnet is only supported with init')
     tls_files=(args.cert_file,args.key_file,args.ca_file)
@@ -245,10 +263,12 @@ def main():
     try:
         if sys.platform!='linux':raise ValueError('native Linux required')
         directory=DIRECTORY
+        if args.deploy_dir is not None:
+            directory=args.deploy_dir.resolve(strict=True)/'data'/'vm-appliance'
         if args.tenant_profile is not None:
             if not re.fullmatch(r'[a-z0-9][a-z0-9-]{0,47}',args.tenant_profile):
                 raise ValueError('invalid tenant profile name')
-            directory=DIRECTORY.parent/'vm-tenants'/args.tenant_profile
+            directory=directory.parent/'vm-tenants'/args.tenant_profile
         if args.action=='init':
             if args.server_ip is None and args.subnet is None:
                 parser.error('init requires either --server-ip or --subnet')
@@ -270,6 +290,8 @@ def main():
         if args.client_ip or (args.action!='rebind' and (args.server_ip or args.admin_ip)):
             raise ValueError('invalid address options for action')
         item=local.state(directory)
+        if args.action=='reset-admin':
+            return reset_admin(directory,item)
         if args.action=='status':
             result=local.run([
                 'docker','ps','--all',

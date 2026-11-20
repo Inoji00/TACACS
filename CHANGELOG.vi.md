@@ -4,6 +4,8 @@
 
 ## Chưa phát hành
 
+- Khôi phục mật khẩu admin khởi tạo bằng `tnac reset-admin` trong terminal root riêng. Thu hồi phiên Web hiện có và giữ MFA.
+
 - Mật khẩu mới phải có tối thiểu 12 ký tự, gồm chữ hoa, chữ thường, chữ số và ký hiệu ASCII. Mật khẩu hiện tại vẫn dùng được đến khi đổi.
 - Áp dụng khi tạo hoặc đặt lại mật khẩu device user, đổi mật khẩu Web và khởi tạo admin. Giao diện hiển thị yêu cầu bằng cả hai ngôn ngữ.
 - Căn đều bộ lọc Syslog theo chiều rộng màn hình, giữ mỗi bản ghi trên một dòng.

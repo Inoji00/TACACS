@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Recover the installation administrator from a private root terminal with `tnac reset-admin`. Password reset invalidates existing Web sessions and preserves MFA.
+
 - Require new account passwords to have at least 12 characters, including an uppercase letter, a lowercase letter, a digit and an ASCII punctuation symbol. Existing passwords remain valid until changed.
 - Apply the policy to device-user creation and password resets, Web password changes, and administrator bootstrap. Show the requirements in both console languages.
 - Align Syslog filters in a responsive grid while retaining single-line log rows.

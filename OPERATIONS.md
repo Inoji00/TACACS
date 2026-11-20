@@ -59,6 +59,19 @@ In **Users → Edit Web access**, select **View AAA logs**. The user can read au
 
 Delegated users can see events recorded within the current device assignment, starting at migration 037 for existing devices. A change to Location or Device Type, deletion, or re-registration starts a new log window. Grant changes invalidate the target user's current Web sessions.
 
+## Reset the Web Admin password
+
+On the Ubuntu VM, open a private terminal with sudo access while PostgreSQL is running.
+
+```bash
+cd "$HOME/TNAC+"
+sudo bash tnac reset-admin
+```
+
+Type `RESET` to confirm and enter the new password twice. The command targets the administrator recorded at installation. It clears failed password attempts, unlocks an enabled account, invalidates its Web sessions and records `admin.password.reset` in Audit Logs. Sign in with the new password and your existing TOTP if MFA is enabled.
+
+For a separate checkout containing the recovery command, pass `--deploy-dir "$HOME/TNAC+"` to target the running installation. The command reuses the existing initializer image and database connection, then removes its temporary container.
+
 ## Unlock a user account
 
 In **Users**, select **Unlock** for the locked account and confirm the action. The action is recorded in the Activity Log. Sign in again after unlocking.

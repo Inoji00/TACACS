@@ -59,6 +59,19 @@ Trong **Users → Edit Web access**, chọn **View AAA logs**. User được xem
 
 User được ủy quyền chỉ thấy sự kiện trong lần gán phạm vi hiện tại. Với thiết bị đã có, mốc này bắt đầu từ migration 037. Đổi Location, Device Type, xóa hoặc đăng ký lại thiết bị sẽ bắt đầu một khoảng log mới. Lưu quyền sẽ kết thúc các phiên Web đang mở của user.
 
+## Khôi phục mật khẩu Web Admin
+
+Khi quên mật khẩu của admin đã tạo lúc cài TNAC+, chạy từ terminal riêng trên Ubuntu bằng tài khoản có quyền sudo. PostgreSQL phải đang chạy.
+
+```bash
+cd "$HOME/TNAC+"
+sudo bash tnac reset-admin
+```
+
+Gõ `RESET` để xác nhận rồi nhập mật khẩu mới hai lần. Mật khẩu cần tối thiểu 12 ký tự, có chữ hoa, chữ thường, chữ số và ký hiệu ASCII. Lệnh đặt lại bộ đếm đăng nhập sai, mở khóa admin nếu tài khoản vẫn được bật và thu hồi các phiên Web của tài khoản đó. Xem sự kiện `admin.password.reset` trong Audit Logs.
+
+Đăng nhập lại bằng mật khẩu mới và TOTP hiện có nếu VM yêu cầu MFA. Lệnh `credentials` vẫn hiển thị thông tin khởi tạo. Với bản source khôi phục giải nén riêng, thêm `--deploy-dir "$HOME/TNAC+"` để dùng cấu hình và cơ sở dữ liệu của bản đang chạy.
+
 ## Mở khóa tài khoản
 
 Trong **Users**, chọn **Unlock** cho tài khoản đang bị khóa và xác nhận. Activity Log ghi lại thao tác. User đăng nhập lại sau khi được mở khóa.

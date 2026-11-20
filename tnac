@@ -2,6 +2,10 @@
 set -euo pipefail
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
 case "${1:-}" in
+    reset-admin)
+        export PYTHONPATH="$PWD/src"
+        exec python3 -s scripts/vm_appliance.py "$@"
+        ;;
     enable-monitoring)
         exec python3 -Es scripts/monitoring.py install
         ;;
@@ -10,7 +14,7 @@ case "${1:-}" in
         exec .venv/bin/python scripts/vm_appliance.py "$@"
         ;;
     *)
-        printf '%s\n' 'Usage: sudo bash tnac {status|start|stop|snapshot|enable-monitoring|credentials|enroll|rebind|password-only|short-names}' >&2
+        printf '%s\n' 'Usage: sudo bash tnac {status|start|stop|snapshot|enable-monitoring|credentials|reset-admin|enroll|rebind|password-only|short-names}' >&2
         exit 2
         ;;
 esac
