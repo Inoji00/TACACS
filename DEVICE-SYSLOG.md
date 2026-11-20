@@ -11,9 +11,9 @@ Install TNAC+ first. For an existing installation use a separate source checkout
 ```bash
 git clone --branch v1.1.3 https://github.com/Inoji00/TACACS.git tnac-syslog-src
 cd tnac-syslog-src
-sudo docker build -t tnac:device-syslog-v1.1.3 .
+sudo docker build -t tnac:syslog .
 read -r -p 'Management IPv4: ' listen_ip
-sudo bash scripts/enable_device_syslog.sh "$HOME/TNAC+" "$listen_ip" tnac:device-syslog-v1.1.3
+sudo bash scripts/enable_device_syslog.sh "$HOME/TNAC+" "$listen_ip"
 ```
 
 The script prints the Compose backup path and creates or reuses the project Syslog volume. It recreates the Web services and briefly interrupts HTTPS. Keep the backup path and verify the collector, admin and proxy are healthy. Permit UDP/514 only from your intended device networks at the network boundary. UDP sources can be spoofed and UDP delivery may lose messages. / Script in đường dẫn backup Compose và tạo hoặc dùng lại volume Syslog của project. Hai dịch vụ Web được tạo lại và HTTPS gián đoạn ngắn. Giữ đường dẫn backup, kiểm tra collector, admin và proxy báo healthy. Chỉ mở UDP/514 từ mạng thiết bị cần nhận log. UDP có thể mất bản tin và địa chỉ nguồn có thể bị giả mạo.

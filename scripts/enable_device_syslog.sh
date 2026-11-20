@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $EUID != 0 || $# != 3 ]]; then
-  echo 'Usage: sudo bash enable_device_syslog.sh DEPLOY_DIR LISTEN_IPV4 IMAGE' >&2
+if [[ $EUID != 0 || $# < 2 || $# > 3 ]]; then
+  echo 'Usage: sudo bash enable_device_syslog.sh DEPLOY_DIR LISTEN_IPV4 [IMAGE]' >&2
   exit 2
 fi
 deploy_dir=$(realpath -e -- "$1")
 listen_ip=$2
-image=$3
+image=${3-tnac:syslog}
 config="$deploy_dir/data/vm-appliance/compose.json"
 
 test -f "$config" && test ! -L "$config"
