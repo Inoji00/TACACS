@@ -2,9 +2,12 @@
 
 **English** · [Tiếng Việt](CHANGELOG.vi.md)
 
-## Unreleased
+## v1.1.5 — 2026-11-20
 
 - Add Mattermost as an alternative webhook destination to Slack. The Linux worker sends Mattermost alerts only to an administrator-approved DNS hostname.
+
+- Simplify Device Syslog to four columns. Expand a log message in place to read the original text without a per-row scrollbar.
+- Validate Mattermost destinations, reject redirects and neutralize mentions from log content.
 
 ## v1.1.4 — 2026-11-20
 

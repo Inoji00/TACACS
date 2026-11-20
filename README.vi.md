@@ -1,4 +1,4 @@
-# TNAC+ v1.1.4
+# TNAC+ v1.1.5
 
 [English](README.md) · **Tiếng Việt**
 
@@ -21,7 +21,7 @@ TNAC+ tích hợp cảnh báo hoạt động/sức khỏe qua Slack, báo khóa 
 
 ## Cài mới trên Ubuntu
 
-Tải [ZIP cài đặt](https://github.com/Inoji00/TACACS/releases/download/v1.1.4/TNAC-v1.1.4.zip) và [SHA-256](https://github.com/Inoji00/TACACS/releases/download/v1.1.4/TNAC-v1.1.4.zip.sha256), hoặc clone nhánh mặc định bên dưới.
+Tải [ZIP cài đặt](https://github.com/Inoji00/TACACS/releases/download/v1.1.5/TNAC-v1.1.5.zip) và [SHA-256](https://github.com/Inoji00/TACACS/releases/download/v1.1.5/TNAC-v1.1.5.zip.sha256), hoặc clone nhánh mặc định bên dưới.
 
 Cần Ubuntu amd64, Python 3.12 trở lên có venv, Docker Engine, Buildx, Compose v2 và IPv4 quản trị. VM cần Internet để tải image nền và dependency.
 

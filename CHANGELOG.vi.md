@@ -2,9 +2,12 @@
 
 [English](CHANGELOG.md) · **Tiếng Việt**
 
-## Chưa phát hành
+## v1.1.5 — 20/11/2026
 
 - Thêm Mattermost làm lựa chọn nhận cảnh báo bên cạnh Slack. Máy Linux chỉ gửi webhook Mattermost đến tên DNS do quản trị viên phê duyệt.
+
+- Rút gọn bảng Device Syslog còn bốn cột. Bấm mở nội dung log ngay trong bảng để đọc đầy đủ.
+- Kiểm tra đích Mattermost, chặn chuyển hướng và vô hiệu hóa thông báo nhắc tên từ nội dung log.
 
 ## v1.1.4 — 20/11/2026
 
