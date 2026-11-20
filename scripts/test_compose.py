@@ -127,7 +127,7 @@ def main():
                 '/runtime/device_localhost':(secrets.token_urlsafe(48),10001,0o600),
                 '/provision/owner_dsn':(f'host=postgres dbname=tacacs user=tacacs_app password={password}',0,0o600),
                 '/provision/aaa_password':(aaa,0,0o600),'/provision/admin_password':(admin,0,0o600),
-                '/provision/operator_password':(secrets.token_urlsafe(32),0,0o600),
+                '/provision/operator_password':('Aa1!'+secrets.token_urlsafe(32),0,0o600),
                 '/dbsecret/postgres_password':(password,70,0o600)}
             if args.admin:
                 from cryptography import x509

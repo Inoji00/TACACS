@@ -1,5 +1,6 @@
 """Authenticated self-service password change, atomic with redacted audit."""
 from uuid import UUID
+from .password_policy import valid_new_password
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError,InvalidHashError
 from .password_timing import acceptable_password_hash,bounded_password_work
@@ -26,7 +27,7 @@ class AdminPasswordChange:
     @bounded_password_work
     def change(self,actor,current_password,new_password):
         if (not isinstance(current_password,str) or not 1<=len(current_password)<=1024
-                or not isinstance(new_password,str) or not 8<=len(new_password)<=1024
+                or not valid_new_password(new_password)
                 or current_password==new_password):raise ValueError('invalid password change')
         user=UUID(actor);hasher=PasswordHasher()
         with self.pool.connection() as connection:

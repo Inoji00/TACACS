@@ -9,7 +9,7 @@ class InstallDatabaseTests(unittest.TestCase):
     def arguments(self):
         return dict(migration_directory=Path('migrations'),aaa_role='aaa',admin_role='admin',
             aaa_password='a'*48,admin_password='b'*48,tenant_id='tenant',name='Local',
-            username='operator',password='operator-password',mfa_reference='secret://mfa/operator')
+            username='operator',password='Operator-password-42!',mfa_reference='secret://mfa/operator')
 
     def test_migrations_precede_shared_bootstrap_transaction(self):
         connection=Mock();connection.transaction.side_effect=lambda:nullcontext()

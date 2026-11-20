@@ -1,6 +1,7 @@
 """Tenant-scoped identity provisioning and device console delegation."""
 import re
 from uuid import UUID, uuid4
+from .password_policy import valid_new_password
 from argon2 import PasswordHasher
 from psycopg.errors import ForeignKeyViolation
 from .password_timing import bounded_password_work
@@ -19,7 +20,7 @@ class AdminIdentities:
     @bounded_password_work
     def create(self, actor, username, password, group_name):
         if (not isinstance(username, str) or not re.fullmatch(r'[A-Za-z0-9_.@-]{1,64}', username)
-                or not isinstance(password, str) or not 8 <= len(password) <= 1024
+                or not valid_new_password(password)
                 or not isinstance(group_name, str) or not re.fullmatch(r'[A-Za-z0-9_.-]{1,64}', group_name)):
             raise ValueError('invalid identity')
         actor, user, group = UUID(actor), uuid4(), uuid4()
@@ -193,7 +194,7 @@ class AdminIdentities:
     @bounded_password_work
     def update(self, actor, user_id, username, password, group_name, enabled):
         if (not isinstance(username,str) or not re.fullmatch(r'[A-Za-z0-9_.@-]{1,64}',username)
-                or not isinstance(password,str) or (password and not 8<=len(password)<=1024)
+                or not isinstance(password,str) or (password and not valid_new_password(password))
                 or not isinstance(group_name,str) or not re.fullmatch(r'[A-Za-z0-9_.-]{1,64}',group_name)
                 or type(enabled) is not bool):
             raise ValueError('invalid identity')

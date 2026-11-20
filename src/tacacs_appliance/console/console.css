@@ -1203,7 +1203,13 @@ main.login-page #login-panel form > button:hover { background: #9fe5fa; }
 }
 .connection-guide-cli .actions { flex-wrap: wrap; }
 
-.device-syslog-filters { flex-wrap: wrap; }
+.workspace .device-syslog-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: .75rem;
+}
+.workspace .device-syslog-filters label { min-width: 0; }
+.workspace .device-syslog-filters button { justify-self: start; }
 .device-syslog-table { overflow: auto; }
 .device-syslog-table table { width: 100%; min-width: 58rem; table-layout: fixed; }
 .device-syslog-table th,

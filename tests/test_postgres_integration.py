@@ -202,20 +202,20 @@ class PostgresIntegrationTests(unittest.TestCase):
         with self.pool.connection() as db:db.execute("INSERT INTO admin_grants VALUES (%s,%s,'users.manage')",(tenant,actor))
         with self.restricted_pool('admin') as pool:
             writer=PostgresAuditWriter(pool,str(tenant));manager=AdminIdentities(pool,str(tenant),writer.append_in_transaction)
-            user=manager.create(str(actor),'history-user','12345678','ops')['id']
+            user=manager.create(str(actor),'history-user','First-test-42!','ops')['id']
             version=uuid4()
             with self.pool.connection() as db:db.execute("INSERT INTO policy_versions(id,tenant_id,revision,state,author_id,rules) VALUES (%s,%s,1,'draft',%s,'[]')",(version,tenant,user))
             manager.delete(str(actor),user)
             self.assertFalse(any(row['id']==user for row in manager.list_users(str(actor))['users']))
             self.assertFalse(any(row['id']==user for row in AdminInventory(pool,str(tenant)).read()['users']))
-            self.assertFalse(PostgresLocalProvider(pool,str(tenant)).authenticate('history-user','12345678').authenticated)
+            self.assertFalse(PostgresLocalProvider(pool,str(tenant)).authenticate('history-user','First-test-42!').authenticated)
             with pool.connection() as db:
                 self.assertEqual(db.execute('SELECT enabled,deleted FROM users WHERE id=%s',(user,)).fetchone(),(False,True))
                 self.assertEqual(str(db.execute('SELECT author_id FROM policy_versions WHERE id=%s',(version,)).fetchone()[0]),user)
-            replacement=manager.create(str(actor),'history-user','87654321','ops')['id']
+            replacement=manager.create(str(actor),'history-user','Second-test-42!','ops')['id']
             self.assertNotEqual(replacement,user)
-            self.assertFalse(PostgresLocalProvider(pool,str(tenant)).authenticate('history-user','12345678').authenticated)
-            self.assertTrue(PostgresLocalProvider(pool,str(tenant)).authenticate('history-user','87654321').authenticated)
+            self.assertFalse(PostgresLocalProvider(pool,str(tenant)).authenticate('history-user','First-test-42!').authenticated)
+            self.assertTrue(PostgresLocalProvider(pool,str(tenant)).authenticate('history-user','Second-test-42!').authenticated)
             manager.delete(str(actor),replacement)
             with pool.connection() as db:
                 self.assertIsNone(db.execute('SELECT id FROM users WHERE id=%s',(replacement,)).fetchone())
@@ -426,16 +426,16 @@ class PostgresIntegrationTests(unittest.TestCase):
         with self.restricted_pool('admin') as pool:
             audit=PostgresAuditWriter(pool,str(tenant))
             manager=AdminIdentities(pool,str(tenant),audit.append_in_transaction)
-            user=manager.create(str(actor),'switch-operator','device-test-password','operators')['id']
-            self.assertTrue(PostgresLocalProvider(pool,str(tenant)).authenticate('switch-operator','device-test-password').authenticated)
-            with self.assertRaises(ValueError):manager.create(str(actor),'switch-operator','other-test-password','operators')
+            user=manager.create(str(actor),'switch-operator','Device-test-42!','operators')['id']
+            self.assertTrue(PostgresLocalProvider(pool,str(tenant)).authenticate('switch-operator','Device-test-42!').authenticated)
+            with self.assertRaises(ValueError):manager.create(str(actor),'switch-operator','Other-test-42!','operators')
             manager.set_enabled(str(actor),user,False)
-            self.assertFalse(PostgresLocalProvider(pool,str(tenant)).authenticate('switch-operator','device-test-password').authenticated)
+            self.assertFalse(PostgresLocalProvider(pool,str(tenant)).authenticate('switch-operator','Device-test-42!').authenticated)
             with self.assertRaises(ValueError):manager.set_enabled(str(actor),str(other_user),False)
             with self.assertRaises(ValueError):manager.set_enabled(str(actor),str(actor),False)
-            with self.assertRaises(PermissionError):manager.create(str(other_user),'forged','device-test-password','operators')
+            with self.assertRaises(PermissionError):manager.create(str(other_user),'forged','Device-test-42!','operators')
             def fail(*args,**kwargs):raise RuntimeError('audit failure')
-            with self.assertRaises(RuntimeError):AdminIdentities(pool,str(tenant),fail).create(str(actor),'rolled-back','device-test-password','operators')
+            with self.assertRaises(RuntimeError):AdminIdentities(pool,str(tenant),fail).create(str(actor),'rolled-back','Device-test-42!','operators')
             with pool.connection() as connection:
                 self.assertIsNone(connection.execute('SELECT id FROM users WHERE tenant_id=%s AND username=%s',(tenant,'rolled-back')).fetchone())
                 self.assertIsNone(connection.execute('SELECT 1 FROM admin_grants WHERE tenant_id=%s AND user_id=%s',(tenant,user)).fetchone())
@@ -450,13 +450,13 @@ class PostgresIntegrationTests(unittest.TestCase):
         with self.restricted_pool('admin') as pool:
             audit=PostgresAuditWriter(pool,str(tenant))
             manager=AdminIdentities(pool,str(tenant),audit.append_in_transaction)
-            user=manager.create(str(actor),'edit-lab','12345678','ops')['id']
+            user=manager.create(str(actor),'edit-lab','First-test-42!','ops')['id']
             listed=manager.list_users(str(actor))
             self.assertTrue(any(row['id']==user and row['groups']==['ops'] for row in listed['users']))
-            manager.update(str(actor),user,'renamed-lab','abcdefgh','new-ops',True)
-            self.assertTrue(PostgresLocalProvider(pool,str(tenant)).authenticate('renamed-lab','abcdefgh').authenticated)
+            manager.update(str(actor),user,'renamed-lab','Changed-test-42!','new-ops',True)
+            self.assertTrue(PostgresLocalProvider(pool,str(tenant)).authenticate('renamed-lab','Changed-test-42!').authenticated)
             with self.assertRaises(ValueError):
-                manager.update(str(actor),str(other_actor),'forged','abcdefgh','ops',True)
+                manager.update(str(actor),str(other_actor),'forged','Changed-test-42!','ops',True)
             with self.assertRaises(ValueError):manager.delete(str(actor),str(actor))
             def fail(*args,**kwargs):raise RuntimeError('audit unavailable')
             with self.assertRaises(RuntimeError):
@@ -477,7 +477,7 @@ class PostgresIntegrationTests(unittest.TestCase):
         with self.restricted_pool('admin') as pool:
             writer=PostgresAuditWriter(pool,str(tenant))
             manager=AdminIdentities(pool,str(tenant),writer.append_in_transaction)
-            user=manager.create(str(actor),'delegation-lab','12345678','ops')['id']
+            user=manager.create(str(actor),'delegation-lab','First-test-42!','ops')['id']
             permissions=PostgresAdminPermissions(pool,str(tenant))
             sessions=LocalPasswordSessions(pool,str(tenant))
             self.assertFalse(permissions(user,'console.read'))
@@ -512,7 +512,7 @@ class PostgresIntegrationTests(unittest.TestCase):
             writer=PostgresAuditWriter(pool,str(tenant))
             audit=writer.append_in_transaction
             identities=AdminIdentities(pool,str(tenant),audit)
-            operator=identities.create(admin,'scoped-operator','12345678','ops')['id']
+            operator=identities.create(admin,'scoped-operator','First-test-42!','ops')['id']
             groups=DeviceGroups(pool,tenant)
             location=groups.save(admin,dict(operation='save',id=None,kind='location',name='HQ',description='',parent_id=None),audit)['id']
             child=groups.save(admin,dict(operation='save',id=None,kind='location',name='Branch',description='',parent_id=location),audit)['id']
@@ -536,14 +536,14 @@ class PostgresIntegrationTests(unittest.TestCase):
             self.assertEqual([r['address'] for r in registry.list_devices(actor=operator)['devices']],['192.0.2.2'])
             self.assertTrue(groups.list(actor=operator)['read_only'])
             registry.save(operator,dict(allowed,name='new name',secret=''),audit)
-            self.assertEqual(registry.reveal_secret(operator,allowed['address'],audit,password='12345678'),{'secret':'s'*32})
-            with self.assertRaises(PermissionError):registry.reveal_secret(operator,'192.0.2.3',audit,password='12345678')
+            self.assertEqual(registry.reveal_secret(operator,allowed['address'],audit,password='First-test-42!'),{'secret':'s'*32})
+            with self.assertRaises(PermissionError):registry.reveal_secret(operator,'192.0.2.3',audit,password='First-test-42!')
             with self.assertRaises(PermissionError):registry.save(operator,dict(allowed,location_id=child,secret=''),audit)
             with self.assertRaises(PermissionError):registry.delete(operator,allowed['address'],audit)
             with self.assertRaises(PermissionError):groups.save(operator,dict(operation='delete',id=child),audit)
             identities.set_console_access(admin,operator,True,dict(scope,actions=[]))
             self.assertIsNone(sessions.resolve(token))
-            with self.assertRaises(PermissionError):registry.reveal_secret(operator,allowed['address'],audit,password='12345678')
+            with self.assertRaises(PermissionError):registry.reveal_secret(operator,allowed['address'],audit,password='First-test-42!')
             creation=dict(scope,actions=['create'],creation_addresses=['192.0.2.5'])
             identities.set_console_access(admin,operator,True,creation)
             new=dict(allowed,operation='create',address='192.0.2.5',secret='v'*32)
@@ -796,7 +796,7 @@ class PostgresIntegrationTests(unittest.TestCase):
         arguments=dict(migration_directory=Path(__file__).resolve().parents[1]/'migrations',
             aaa_role=roles[0],admin_role=roles[1],aaa_password=secrets.token_urlsafe(32),
             admin_password=secrets.token_urlsafe(32),tenant_id=tenant,name=tenant,
-            username='installer-admin',password='installer-test-password-long',
+            username='installer-admin',password='Installer-test-42!',
             mfa_reference='secret://installer/mfa',schema=self.schema)
         try:
             with psycopg.connect(self.dsn) as connection:

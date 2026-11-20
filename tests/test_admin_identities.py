@@ -78,7 +78,7 @@ class IdentityTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.service.update(ACTOR,TENANT,'valid','1234567','ops',True)
         with self.assertRaises(ValueError):
-            self.service.update(ACTOR,TENANT,'bad name','12345678','ops',True)
+            self.service.update(ACTOR,TENANT,'bad name','Valid-pass-42!','ops',True)
         connection=self.pool.connection.return_value.__enter__.return_value
         with self.assertRaises(ValueError):self.service._device_user(connection,ACTOR,ACTOR)
         self.assertFalse(any('DELETE' in str(call) for call in connection.execute.call_args_list))
@@ -87,13 +87,13 @@ class IdentityTests(unittest.TestCase):
         connection=self.pool.connection.return_value.__enter__.return_value
         connection.execute.return_value.fetchone.side_effect=[None,(TENANT,)]
         with unittest.mock.patch.object(self.service,'_authorize'):
-            self.service.create(ACTOR,'operator','12345678','ops')
-        self.assertNotIn('12345678',str(self.audit.call_args))
+            self.service.create(ACTOR,'operator','Valid-pass-42!','ops')
+        self.assertNotIn('Valid-pass-42!',str(self.audit.call_args))
         self.assertEqual(self.audit.call_args.kwargs['security_context'],
                          {'target_name':'operator','identity_group':'ops'})
         connection.execute.return_value.fetchone.side_effect=[None,(TENANT,)]
         with unittest.mock.patch.object(self.service,'_authorize'),unittest.mock.patch.object(self.service,'_device_user',return_value='old-operator'):
-            self.service.update(ACTOR,TENANT,'operator','abcdefgh','ops',False)
-        self.assertNotIn('abcdefgh',str(self.audit.call_args))
+            self.service.update(ACTOR,TENANT,'operator','Valid-pass-42!','ops',False)
+        self.assertNotIn('Valid-pass-42!',str(self.audit.call_args))
         self.assertEqual(self.audit.call_args.kwargs['security_context']['previous_name'],'old-operator')
         self.assertIs(self.audit.call_args.kwargs['security_context']['password_changed'],True)

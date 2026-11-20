@@ -2,6 +2,13 @@
 
 **English** · [Tiếng Việt](CHANGELOG.vi.md)
 
+## Unreleased
+
+- Require new account passwords to have at least 12 characters, including an uppercase letter, a lowercase letter, a digit and an ASCII punctuation symbol. Existing passwords remain valid until changed.
+- Apply the policy to device-user creation and password resets, Web password changes, and administrator bootstrap. Show the requirements in both console languages.
+- Align Syslog filters in a responsive grid while retaining single-line log rows.
+- Document runtime boundaries, deployment impact and the frontend source and bundle alignment gap. See the [architecture review](ARCHITECTURE-REVIEW.md).
+
 ## v1.1.3 — 2026-11-20
 
 - Enable Device Syslog automatically on fresh VM installations after checking UDP/514.

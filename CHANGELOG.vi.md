@@ -2,6 +2,13 @@
 
 [English](CHANGELOG.md) · **Tiếng Việt**
 
+## Chưa phát hành
+
+- Mật khẩu mới phải có tối thiểu 12 ký tự, gồm chữ hoa, chữ thường, chữ số và ký hiệu ASCII. Mật khẩu hiện tại vẫn dùng được đến khi đổi.
+- Áp dụng khi tạo hoặc đặt lại mật khẩu device user, đổi mật khẩu Web và khởi tạo admin. Giao diện hiển thị yêu cầu bằng cả hai ngôn ngữ.
+- Căn đều bộ lọc Syslog theo chiều rộng màn hình, giữ mỗi bản ghi trên một dòng.
+- Ghi lại ranh giới các thành phần, phạm vi triển khai và phần source frontend cần đồng bộ với bundle. Xem [biên bản rà soát kiến trúc](ARCHITECTURE-REVIEW.md).
+
 ## v1.1.3 — 20/11/2026
 
 - Cài mới tự bật Device Syslog sau khi kiểm tra UDP/514.

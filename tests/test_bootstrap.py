@@ -12,10 +12,10 @@ class BootstrapTests(unittest.TestCase):
         connection=Mock();connection.transaction.side_effect=lambda:nullcontext()
         with patch("tacacs_appliance.bootstrap.validate_schema"),patch("tacacs_appliance.bootstrap.PostgresAuditWriter") as writer:
             user,factor=bootstrap_tenant(connection,tenant_id=TENANT,name="Local",username="admin",
-                                        password="strong-local-password",mfa_reference="secret://mfa/admin")
+                                        password="Strong-local-42!",mfa_reference="secret://mfa/admin")
         insert=next(c for c in connection.execute.call_args_list if c.args[0].startswith("INSERT INTO users"))
-        self.assertTrue(PasswordHasher().verify(insert.args[1][-1],"strong-local-password"))
-        self.assertNotIn("strong-local-password",str(connection.execute.call_args_list))
+        self.assertTrue(PasswordHasher().verify(insert.args[1][-1],"Strong-local-42!"))
+        self.assertNotIn("Strong-local-42!",str(connection.execute.call_args_list))
         mfa=next(c for c in connection.execute.call_args_list if c.args[0].startswith("INSERT INTO mfa_factors"))
         self.assertIn("FALSE",mfa.args[0])
         writer.return_value.append_in_transaction.assert_called_once()

@@ -46,6 +46,8 @@ sudo bash tnac credentials
 
 Run `credentials` in a private terminal. Use the public CA file at `data/vm-appliance/localhost-ca.pem` to verify the certificate presented by the HTTPS URL printed by the installer before signing in. Change the initial password after signing in and register devices under **Network Resources → Devices**. Use each device's source IP and a unique shared secret.
 
+New account passwords must be 12–1024 characters and include `A–Z`, `a–z`, `0–9` and an ASCII punctuation symbol such as `!`, `@` or `#`.
+
 This installer initializes a fresh deployment. For an existing deployment, run `sudo bash tnac status` to check its state. See [Operations](OPERATIONS.md) for service CLI and installation of a trusted CA certificate for your management domain.
 
 The installer enables a systemd timer to refresh **Services** and **System resources** about once a minute. For an existing deployment, update the source and run `sudo bash tnac enable-monitoring`.

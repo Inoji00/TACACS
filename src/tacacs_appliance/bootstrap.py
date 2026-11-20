@@ -2,6 +2,7 @@
 import argparse
 from pathlib import Path
 from uuid import UUID, uuid4
+from .password_policy import valid_new_password
 from argon2 import PasswordHasher
 import psycopg
 from .admin_rbac import PERMISSIONS
@@ -16,8 +17,8 @@ def bootstrap_tenant(connection, *, tenant_id: str, name: str, username: str, pa
     if (not isinstance(name,str) or not 1<=len(name)<=253 or not isinstance(username,str)
             or not 1<=len(username)<=253 or any(ord(c)<32 or ord(c)==127 for c in name+username)):
         raise ValueError("invalid tenant or username")
-    if not isinstance(password,str) or not 8<=len(password)<=1024:
-        raise ValueError("bootstrap password must contain 8..1024 characters")
+    if not valid_new_password(password):
+        raise ValueError("bootstrap password must contain 12..1024 characters with uppercase, lowercase, a digit and ASCII punctuation")
     if not isinstance(mfa_reference,str) or not mfa_reference.startswith("secret://") or len(mfa_reference)<=9 or len(mfa_reference)>1024:
         raise ValueError("MFA secret reference required")
     password_hash = PasswordHasher().hash(password)

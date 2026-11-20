@@ -107,7 +107,9 @@ def prepare_files(tenant,gateway,*,password_only=False,admin_ip=None):
     if gateway is None:
         service_config+='devices = []\n'
     service_config+='[listener]\nhost = "0.0.0.0"\nport = 49\n'
-    password,aaa,admin,operator=(secrets.token_urlsafe(48) for _ in range(4))
+    password,aaa,admin=(secrets.token_urlsafe(48) for _ in range(3))
+    # This host script also runs before the application package is installed.
+    operator='Aa1!'+secrets.token_urlsafe(48)
     totp_secret=secrets.token_bytes(32)
     certificate,private_key=admin_certificate(admin_ip)
     from urllib.parse import urlencode
@@ -363,23 +365,25 @@ from uuid import UUID
 from argon2 import PasswordHasher
 import psycopg
 from tacacs_appliance.runtime import read_secret
+from tacacs_appliance.password_policy import generate_password
 from tacacs_appliance.postgres_audit import PostgresAuditWriter
 tenant,user=UUID(sys.argv[1]),UUID(sys.argv[2])
+password=generate_password()
 with psycopg.connect(read_secret(Path('/run/provision/owner_dsn')).decode()) as db:
  with db.transaction():
   row=db.execute('SELECT username FROM users WHERE tenant_id=%s AND id=%s AND enabled AND NOT locked FOR UPDATE',(tenant,user)).fetchone()
   if row!=('admin',):raise ValueError('unexpected administrator')
-  db.execute('UPDATE users SET password_hash=%s,failed_logins=0 WHERE tenant_id=%s AND id=%s',(PasswordHasher().hash('admin'),tenant,user))
+  db.execute('UPDATE users SET password_hash=%s,failed_logins=0 WHERE tenant_id=%s AND id=%s',(PasswordHasher().hash(password),tenant,user))
   PostgresAuditWriter(None,str(tenant)).append_in_transaction(db,actor='local-operator',source='local-cli',action='admin.password.evaluation-default',target=str(user),result='success')
-p=Path('/run/provision/operator_password');p.write_text('admin');p.chmod(0o600)
-p=Path('/run/provision/operator-access.json');data=json.loads(p.read_text());data['password']='admin';p.write_text(json.dumps(data));p.chmod(0o600)
+p=Path('/run/provision/operator_password');p.write_text(password);p.chmod(0o600)
+p=Path('/run/provision/operator-access.json');data=json.loads(p.read_text());data['password']=password;p.write_text(json.dumps(data));p.chmod(0o600)
 print('Evaluation administrator password set. No MFA flags or grants changed.')
 """
     run(['docker','run','--rm','--network',item['project']+'-private','--user','0:0',
         '--cap-drop','ALL','--security-opt','no-new-privileges','--mount',
         f'type=volume,source={item["project"]}-provision,target=/run/provision',
         image_for(item['project']),'python','-c',setup,item['tenant'],item['user']])
-    print('Local evaluation sign-in: admin / admin. Change this weak password after sign-in.')
+    print('Run python3 scripts/local_appliance.py login-info in a private terminal.')
 
 
 def main():
