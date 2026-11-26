@@ -1,4 +1,5 @@
 """Operator-only migration command using a secret file, never a CLI DSN."""
+
 import argparse
 from pathlib import Path
 import psycopg
@@ -7,7 +8,9 @@ from .migrations import migrate
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Apply local TACACS+ PostgreSQL migrations")
+    parser = argparse.ArgumentParser(
+        description="Apply local TACACS+ PostgreSQL migrations"
+    )
     parser.add_argument("--dsn-file", required=True, type=Path)
     parser.add_argument("--directory", required=True, type=Path)
     args = parser.parse_args()
@@ -22,7 +25,9 @@ def main() -> int:
         return 0
     except Exception:
         # Connection diagnostics can contain passwords or sensitive endpoints.
-        print("Migration failed. Check database access, migration checksums and schema compatibility.")
+        print(
+            "Migration failed. Check database access, migration checksums and schema compatibility."
+        )
         return 1
 
 

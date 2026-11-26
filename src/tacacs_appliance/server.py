@@ -54,15 +54,24 @@ class TacacsListener:
     connection has deadlines plus a finite request count.
     """
 
-    def __init__(self, config: ListenerConfig, handler: FrameHandler, *, handler_factory: Callable[[], FrameHandler] | None = None, metrics=None,source_state=None) -> None:
+    def __init__(
+        self,
+        config: ListenerConfig,
+        handler: FrameHandler,
+        *,
+        handler_factory: Callable[[], FrameHandler] | None = None,
+        metrics=None,
+        source_state=None,
+    ) -> None:
         config.validate()
         self._config = config
         self._handler = handler
         self._handler_factory = handler_factory
         self._metrics = metrics
-        self._source_state=source_state
+        self._source_state = source_state
         self._networks = tuple(
-            ipaddress.ip_network(source, strict=False) for source in config.allowed_sources
+            ipaddress.ip_network(source, strict=False)
+            for source in config.allowed_sources
         )
         self._slots = threading.BoundedSemaphore(config.connection_limit)
         self._stop = threading.Event()
@@ -73,7 +82,9 @@ class TacacsListener:
             max_workers=config.worker_limit, thread_name_prefix="tacacs-client"
         )
         self._log = logging.getLogger(__name__)
-        self._source_limiter = SourceRateLimiter(config.source_rate_capacity, config.source_rate_refill_per_second)
+        self._source_limiter = SourceRateLimiter(
+            config.source_rate_capacity, config.source_rate_refill_per_second
+        )
 
     @property
     def address(self) -> tuple[str, int] | None:
@@ -111,7 +122,8 @@ class TacacsListener:
             # Static ACLs are cheap. Dynamic ACLs may query PostgreSQL and
             # must run in a bounded worker before touching the rate limiter.
             if self._source_state is None and (
-                not self._source_allowed(remote_ip) or not self._source_limiter.allow(remote_ip)
+                not self._source_allowed(remote_ip)
+                or not self._source_limiter.allow(remote_ip)
             ):
                 client.close()
                 continue
@@ -151,9 +163,11 @@ class TacacsListener:
     def _source_allowed(self, remote_ip: str) -> bool:
         if self._source_state is not None:
             try:
-                state=self._source_state(remote_ip)
-                if state is not None:return state is True
-            except Exception:return False
+                state = self._source_state(remote_ip)
+                if state is not None:
+                    return state is True
+            except Exception:
+                return False
         # Default deny is intentional: an empty ACL permits no TACACS+ device.
         address = ipaddress.ip_address(remote_ip)
         return any(address in network for network in self._networks)
@@ -170,7 +184,9 @@ class TacacsListener:
                 return
             # Stateful AAA handlers are created per connection. This prevents a
             # session ID reused on another TCP connection stealing a challenge.
-            handler = self._handler_factory() if self._handler_factory else self._handler
+            handler = (
+                self._handler_factory() if self._handler_factory else self._handler
+            )
             client.settimeout(self._config.read_timeout_seconds)
             for _ in range(self._config.request_limit_per_connection):
                 if self._stop.is_set():
@@ -190,11 +206,13 @@ class TacacsListener:
                     # Verify handler output before network emission. A handler
                     # may not bypass framing/size/flag invariants.
                     reply = parse_frame(response, self._config.limits)
-                    if (reply.header.session_id != header.session_id
-                            or reply.header.packet_type != header.packet_type
-                            or reply.header.version != header.version
-                            or header.sequence % 2 != 1
-                            or reply.header.sequence != header.sequence + 1):
+                    if (
+                        reply.header.session_id != header.session_id
+                        or reply.header.packet_type != header.packet_type
+                        or reply.header.version != header.version
+                        or header.sequence % 2 != 1
+                        or reply.header.sequence != header.sequence + 1
+                    ):
                         raise ProtocolError("invalid TACACS+ response correlation")
                     client.sendall(response)
         except (ConnectionError, OSError, ProtocolError, TimeoutError):
@@ -211,7 +229,9 @@ class TacacsListener:
             self._slots.release()
 
 
-def _read_exact(client: socket.socket, size: int, *, deadline: float | None = None) -> bytes:
+def _read_exact(
+    client: socket.socket, size: int, *, deadline: float | None = None
+) -> bytes:
     """Read an already locally bounded size or raise on disconnect/timeout."""
 
     chunks = bytearray()

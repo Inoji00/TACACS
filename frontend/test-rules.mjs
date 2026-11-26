@@ -1,0 +1,41 @@
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+import {build} from 'esbuild';
+
+const result=await build({entryPoints:['src/rule-editor.tsx'],bundle:true,write:false,platform:'node',format:'cjs'});
+const module={exports:{}};
+new Function('module','exports','require',result.outputFiles[0].text)(module,module.exports,createRequire(import.meta.url));
+const {compileRules}=module.exports;
+const row={key:1,rule_id:'show',groups:'',device_ids:'',command_prefix:'show',decision:'allow'};
+assert.deepEqual(compileRules([]),[]);
+assert.deepEqual(compileRules([row]),[{rule_id:'show',groups:[],device_ids:[],command_prefix:'show',decision:'allow'}]);
+assert.deepEqual(compileRules([{...row,groups:' ops\nops\nnetwork,admin\n',device_ids:'r1\nr2'}])[0].groups,['ops','network,admin']);
+assert.deepEqual(compileRules([row,{...row,key:2,rule_id:'reload',command_prefix:'reload',decision:'deny'}]).map(rule=>rule.rule_id),['show','reload']);
+assert.throws(()=>compileRules([row,{...row,key:2}]),/unique/);
+assert.throws(()=>compileRules([{...row,command_prefix:' '}]),/prefix/);
+assert.throws(()=>compileRules([{...row,command_prefix:'show\u0000'}]),/control/);
+assert.throws(()=>compileRules(Array(4097).fill(row)),/4096/);
+assert.throws(()=>compileRules([{...row,groups:Array(1025).fill('ops').join('\n')}]),/scope/);
+console.log('9 structured rule serialization checks passed.');
+
+const casesBuild=await build({entryPoints:['src/case-editor.tsx'],bundle:true,write:false,platform:'node',format:'cjs'});
+const casesModule={exports:{}};
+new Function('module','exports','require',casesBuild.outputFiles[0].text)(casesModule,casesModule.exports,createRequire(import.meta.url));
+const {compileCases}=casesModule.exports;
+const allow={key:1,subject:'admin',device_id:'r1',command:'show version',groups:'ops',expected:'allow'};
+const deny={...allow,key:2,command:'reload',expected:'deny'};
+assert.deepEqual(compileCases([allow,deny])[0],{subject:'admin',device_id:'r1',command:'show version',groups:['ops'],expected:'allow'});
+assert.equal(compileCases([{...allow,command:'show  version '},deny])[0].command,'show  version ');
+assert.throws(()=>compileCases([allow]),/between/);
+assert.throws(()=>compileCases([allow,{...allow,key:2}]),/both/);
+assert.throws(()=>compileCases([{...allow,subject:''},deny]),/subject/);
+assert.throws(()=>compileCases([{...allow,groups:Array(129).fill('ops').join('\n')},deny]),/groups/);
+assert.throws(()=>compileCases([{...allow,groups:'x'.repeat(254)},deny]),/groups/);
+console.log('7 structured test-case serialization checks passed.');
+
+const {compileSamples}=casesModule.exports;
+assert.deepEqual(compileSamples([allow]),[{subject:'admin',device_id:'r1',command:'show version',groups:['ops']}]);
+assert.equal('expected' in compileSamples([deny])[0],false);
+assert.throws(()=>compileSamples([]),/between/);
+assert.throws(()=>compileSamples(Array(1025).fill(allow)),/between/);
+console.log('4 simulation sample serialization checks passed.');

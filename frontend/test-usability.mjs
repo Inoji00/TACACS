@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+import {build} from 'esbuild';
+import {createElement} from 'react';
+import {renderToStaticMarkup} from 'react-dom/server';
+const compiled=await build({stdin:{contents:"export * from './src/access-mappings';export * from './src/device-mapping-selection';export * from './src/group-name-input';export * from './src/user-directory';export * from './src/i18n';",resolveDir:process.cwd(),loader:'tsx'},bundle:true,write:false,platform:'node',format:'cjs',external:['react','react/jsx-runtime']});
+const module={exports:{}};new Function('module','exports','require',compiled.outputFiles[0].text)(module,module.exports,createRequire(import.meta.url));
+const {AccessMappings,GroupNameInput,WebAccessCell,LanguageProvider}=module.exports;
+const render=(component,props,language='en')=>renderToStaticMarkup(createElement(LanguageProvider,{initialLanguage:language},createElement(component,props)));
+const initial=[{group:'admins',privilege:15,mode:'policy'},{group:'readers',privilege:1,mode:'read_only'}];
+const {deviceMappingForGroup,availableDeviceGroups}=module.exports;
+assert.deepEqual(deviceMappingForGroup(initial,'readers'),initial[1]);
+assert.deepEqual(deviceMappingForGroup(initial,'admins'),initial[0]);
+assert.deepEqual(deviceMappingForGroup(initial,'super-admin'),{group:'super-admin',privilege:1,mode:'policy'});
+assert.deepEqual(availableDeviceGroups(['readers','new','new'],initial,0),['admins','new']);
+for(const language of ['en','vi']){
+  const html=render(AccessMappings,{initial,busy:false,groups:['admins','readers']},language);
+  const serialized=/name="access_mappings" value="([^"]*)"/.exec(html)[1].replaceAll('&quot;','"').replaceAll('&amp;','&');
+  assert.deepEqual(JSON.parse(serialized),initial,'Changing presentation must preserve saved grants');
+  assert.match(html,/<option value="15" selected="">/);assert.match(html,/<select aria-label="[^"]+" disabled="">[\s\S]*?<option value="1" selected=""/);
+  assert.match(html,/class="access-grant-main access-mapping-row"/);
+}
+assert.match(render(AccessMappings,{initial:[],busy:false}),/name="access_mappings" value="\[\]"/);
+const suggestions=render(GroupNameInput,{groups:['operators','operators','<script>'],name:'group_name',required:true});
+assert.equal((suggestions.match(/value="operators"/g)||[]).length,1);assert.ok(!suggestions.includes('<script>'));assert.match(suggestions,/&lt;script&gt;/);
+assert.match(suggestions,/name="group_name"/);assert.match(suggestions,/pattern="\[A-Za-z0-9_.-\]\{1,64\}"/);
+console.log('Simplified shell grants preserve wire payloads, read-only settings, empty defaults and safe group suggestions.');
+const webAccess={busy:false,onChange(){}};
+assert.match(render(WebAccessCell,webAccess),/<button[^>]*>Grant device configuration access<\/button>/);
+assert.match(render(WebAccessCell,{...webAccess,permissions:['console.read','devices.manage']}),/<button[^>]*>Revoke Web access<\/button>/);
+assert.match(render(WebAccessCell,{...webAccess,permissions:['console.read','devices.manage'],scope:{actions:[]},onEdit(){}},'vi'),/Sửa quyền Web/);
+assert.doesNotMatch(render(WebAccessCell,{...webAccess,self:true}),/<button type="button" class="secondary"/);
+assert.doesNotMatch(render(WebAccessCell,{...webAccess,permissions:['console.read','users.manage']}),/<button type="button" class="secondary"/);

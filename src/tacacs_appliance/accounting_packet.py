@@ -1,4 +1,5 @@
 """RFC 8907 accounting codec, independent of persistence and audit."""
+
 from dataclasses import dataclass
 
 from .authorization_packet import (
@@ -46,4 +47,10 @@ def encode_accounting_reply(status: int, message: str = "", data: bytes = b"") -
     encoded = message.encode("ascii")
     if len(encoded) > 4096 or len(data) > 4096:
         raise AccountingPacketError("accounting reply too large")
-    return len(encoded).to_bytes(2, "big") + len(data).to_bytes(2, "big") + bytes((status,)) + encoded + data
+    return (
+        len(encoded).to_bytes(2, "big")
+        + len(data).to_bytes(2, "big")
+        + bytes((status,))
+        + encoded
+        + data
+    )

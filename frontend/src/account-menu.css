@@ -1,0 +1,9 @@
+.account-menu .account-trigger{gap:10px;min-height:42px;max-width:240px;padding:5px 10px 5px 6px;border:1px solid transparent;border-radius:10px;background:transparent;box-shadow:none;color:#203b50;transition:background .15s,border-color .15s}
+.account-menu .account-trigger:hover,.account-menu .account-trigger[aria-expanded="true"]{background:#f1f6f7;border-color:#e1e9ed}
+.account-trigger .account-avatar{width:30px;height:30px;background:#e1f1ec;font-size:12px}
+.account-trigger .account-name{font-size:13px;font-weight:600;line-height:20px}
+.account-trigger .account-arrow{display:block;flex:none;width:16px;height:16px;margin-left:3px;color:#718391;transition:transform .15s}
+.account-trigger[aria-expanded="true"] .account-arrow{transform:rotate(180deg)}
+.account-menu .account-trigger:focus-visible{outline:2px solid #128779;outline-offset:3px}
+.account-menu .account-popover{top:calc(100% + 10px);border-radius:12px;padding:8px;border-color:#e2e9ee;box-shadow:0 14px 38px #17394e18}
+@media(prefers-reduced-motion:reduce){.account-menu .account-trigger,.account-trigger .account-arrow{transition:none}}

@@ -1,0 +1,50 @@
+.dash-auth-card {
+  --auth-surface: var(--dash-surface, #fff);
+  --auth-ink: var(--dash-ink, #192e45);
+  --auth-muted: var(--dash-muted, #52677c);
+  --auth-line: var(--dash-line, #dbe5ef);
+  --auth-soft: var(--dash-soft, #f3f6f9);
+  --auth-warn: var(--dash-warn, #805514);
+  --auth-warn-fill: var(--dash-warn-soft, #fbefd7);
+  --auth-track-fill: var(--dash-warn, #805514);
+  container-type: inline-size;
+  min-width: 0;
+}
+.dash-auth-header { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.dash-auth-card .dash-auth-header h2 { display: block; margin: 0 0 2px; line-height: 1.3; }
+.dash-auth-header > div > span { color: var(--auth-muted); font-size: 12px; }
+.dash-auth-card button.dash-text-button { padding: 0; border: 0; background: transparent; color: var(--ops-accent, #08756b); font-size: 12px; min-height: 32px; white-space: nowrap; }
+.dash-auth-card button.dash-text-button:hover { text-decoration: underline; }
+.dash-auth-icon, .dash-auth-avatar { display: grid; place-items: center; flex: none; inline-size: 38px; block-size: 38px; }
+.dash-auth-icon { border-radius: 10px; background: var(--auth-warn-fill); color: var(--auth-warn); }
+.dash-auth-icon svg { inline-size: 22px; block-size: 22px; }
+.dash-auth-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 14px 0; }
+.dash-auth-metrics > div { padding: 9px 10px; border-radius: 8px; background: var(--auth-soft); }
+.dash-auth-metrics dt { color: var(--auth-muted); font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; }
+.dash-auth-metrics dd { color: var(--auth-ink); font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; line-height: 1.2; margin: 3px 0 0; overflow-wrap: anywhere; }
+.dash-auth-list { list-style: none; margin: 0; padding: 0; }
+.dash-auth-list li { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(72px, 25%); align-items: center; gap: 8px; padding-block: 10px; border-top: 1px solid var(--auth-line); }
+.dash-auth-avatar { inline-size: 34px; block-size: 34px; border-radius: 50%; background: var(--auth-soft); color: var(--auth-ink); font-size: 12px; font-weight: 600; }
+.dash-auth-leader .dash-auth-avatar { background: var(--auth-warn-fill); color: var(--auth-warn); }
+.dash-auth-identity { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 6px; }
+.dash-auth-identity strong { font-size: 13px; color: var(--auth-ink); overflow-wrap: anywhere; }
+.dash-auth-identity code { font-size: 11px; color: var(--auth-ink); background: var(--auth-soft); border-radius: 4px; padding: 1px 4px; white-space: normal; overflow-wrap: anywhere; min-width: 0; }
+.dash-auth-time { display: flex; align-items: center; gap: 4px; margin-top: 3px; color: var(--auth-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.dash-auth-time svg { flex: none; inline-size: 13px; block-size: 13px; }
+.dash-auth-time time { white-space: normal; }
+.dash-auth-count { display: grid; gap: 5px; text-align: end; font-size: 12px; font-weight: 650; color: var(--auth-ink); font-variant-numeric: tabular-nums; }
+.dash-auth-leader .dash-auth-count { color: var(--auth-warn); }
+.dash-auth-count progress { --auth-progress-fill: var(--auth-muted); display: block; appearance: none; border: 0; inline-size: 100%; block-size: 4px; background: var(--auth-soft); border-radius: 4px; }
+.dash-auth-count progress::-webkit-progress-bar { background: var(--auth-soft); border-radius: 4px; }
+.dash-auth-count progress::-webkit-progress-value { background: var(--auth-progress-fill); border-radius: 4px; }
+.dash-auth-count progress::-moz-progress-bar { background: var(--auth-progress-fill); border-radius: 4px; }
+.dash-auth-leader progress { --auth-progress-fill: var(--auth-track-fill); }
+.dash-auth-empty { border-top: 1px solid var(--auth-line); padding-top: 12px; margin: 0; color: var(--auth-muted); font-size: 12px; }
+
+@container (width < 280px) {
+  .dash-auth-header { grid-template-columns: auto minmax(0, 1fr); }
+  .dash-auth-header .dash-text-button { grid-column: 2; justify-self: start; }
+  .dash-auth-list li { grid-template-columns: minmax(0, 1fr) minmax(68px, 28%); }
+  .dash-auth-avatar { display: none; }
+  .dash-auth-metrics > div { padding-inline: 6px; }
+}

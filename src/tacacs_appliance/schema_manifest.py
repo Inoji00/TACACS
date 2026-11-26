@@ -1,4 +1,5 @@
 """Packaged schema compatibility manifest; hashes use universal newlines."""
+
 EXPECTED_MIGRATIONS = {
     "001_initial.sql": "fd26105f4571d2c46f47e42d7e178adbf81754d89bf664d9e84f2a7b6dcaed7d",
     "002_accounting.sql": "042d9c2a773929f89f6577b30228234fe05259d4f2a273d67eeb42bc9066a86f",

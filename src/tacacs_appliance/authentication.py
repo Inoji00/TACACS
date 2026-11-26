@@ -62,7 +62,9 @@ def parse_authentication_start(
 
     if len(body) < 8:
         raise AuthenticationPacketError("authentication start body too short")
-    action, privilege, auth_type, service, user_len, port_len, remote_len, data_len = body[:8]
+    action, privilege, auth_type, service, user_len, port_len, remote_len, data_len = (
+        body[:8]
+    )
     _validate_lengths(user_len, port_len, remote_len, data_len, limits)
     expected = 8 + user_len + port_len + remote_len + data_len
     if len(body) != expected:
@@ -87,7 +89,9 @@ def parse_authentication_start(
     )
 
 
-def parse_authentication_continue(body: bytes, limits: AuthenticationLimits = AuthenticationLimits()) -> AuthenticationContinue:
+def parse_authentication_continue(
+    body: bytes, limits: AuthenticationLimits = AuthenticationLimits()
+) -> AuthenticationContinue:
     """Parse the 5-byte fixed Authentication CONTINUE header plus exact fields."""
     if len(body) < 5:
         raise AuthenticationPacketError("authentication continue body too short")
@@ -95,22 +99,38 @@ def parse_authentication_continue(body: bytes, limits: AuthenticationLimits = Au
     data_len = int.from_bytes(body[2:4], "big")
     flags = body[4]
     if message_len > limits.max_data_bytes or data_len > limits.max_data_bytes:
-        raise AuthenticationPacketError("authentication continue field exceeds configured maximum")
+        raise AuthenticationPacketError(
+            "authentication continue field exceeds configured maximum"
+        )
     if len(body) != 5 + message_len + data_len:
-        raise AuthenticationPacketError("authentication continue field lengths mismatch")
+        raise AuthenticationPacketError(
+            "authentication continue field lengths mismatch"
+        )
     message = _decode_text(body[5 : 5 + message_len], "user message")
     return AuthenticationContinue(message, bytes(body[5 + message_len :]), flags)
 
 
-def encode_authentication_reply(reply: AuthenticationReply, limits: AuthenticationLimits = AuthenticationLimits()) -> bytes:
+def encode_authentication_reply(
+    reply: AuthenticationReply, limits: AuthenticationLimits = AuthenticationLimits()
+) -> bytes:
     """Encode an RFC 8907 Authentication REPLY with bounded public text."""
     message = reply.server_message.encode("utf-8")
     if len(message) > limits.max_data_bytes or len(reply.data) > limits.max_data_bytes:
-        raise AuthenticationPacketError("authentication reply field exceeds configured maximum")
-    return bytes((reply.status, reply.flags)) + len(message).to_bytes(2, "big") + len(reply.data).to_bytes(2, "big") + message + reply.data
+        raise AuthenticationPacketError(
+            "authentication reply field exceeds configured maximum"
+        )
+    return (
+        bytes((reply.status, reply.flags))
+        + len(message).to_bytes(2, "big")
+        + len(reply.data).to_bytes(2, "big")
+        + message
+        + reply.data
+    )
 
 
-def _validate_lengths(user: int, port: int, remote: int, data: int, limits: AuthenticationLimits) -> None:
+def _validate_lengths(
+    user: int, port: int, remote: int, data: int, limits: AuthenticationLimits
+) -> None:
     if user > limits.max_username_bytes:
         raise AuthenticationPacketError("username exceeds configured maximum")
     if port > limits.max_port_bytes:
@@ -118,7 +138,9 @@ def _validate_lengths(user: int, port: int, remote: int, data: int, limits: Auth
     if remote > limits.max_remote_address_bytes:
         raise AuthenticationPacketError("remote address exceeds configured maximum")
     if data > limits.max_data_bytes:
-        raise AuthenticationPacketError("authentication data exceeds configured maximum")
+        raise AuthenticationPacketError(
+            "authentication data exceeds configured maximum"
+        )
 
 
 def _decode_text(raw: bytes, field: str) -> str:

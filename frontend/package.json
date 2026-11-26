@@ -1,0 +1,20 @@
+{
+  "name": "local-tacacs-admin-console",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "node test-rules.mjs && node test-evidence.mjs && node test-devices.mjs && node test-i18n.mjs && node test-dashboard.mjs && node test-policy-versions.mjs && node test-navigation.mjs && node test-usability.mjs && node test-logging.mjs && node test-shared-secret.mjs",
+    "check": "tsc --noEmit",
+    "build": "esbuild src/main.tsx --bundle --minify --format=iife --target=es2022 --outfile=../artifacts/react-console/console.js"
+  },
+  "dependencies": {
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
+    "esbuild": "0.25.10",
+    "typescript": "5.9.3"
+  }
+}

@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+import {build} from 'esbuild';
+import {createElement} from 'react';
+import {renderToStaticMarkup} from 'react-dom/server';
+const compiled=await build({stdin:{contents:"export * from './src/policy-versions';export * from './src/i18n';",resolveDir:process.cwd(),loader:'tsx'},bundle:true,write:false,platform:'node',format:'cjs',external:['react','react/jsx-runtime']});
+const module={exports:{}};new Function('module','exports','require',compiled.outputFiles[0].text)(module,module.exports,createRequire(import.meta.url));
+const {PolicyVersions,LanguageProvider}=module.exports;
+const base={items:[{version_id:'example-id',revision:1,state:'draft',author_id:'author',approver_id:null}],user:'author',busy:false,nextBefore:null,onRefresh(){},onOlder(){},onLoad(){},onEdit(){},onDelete(){}};
+const render=(overrides={},language='en')=>renderToStaticMarkup(createElement(LanguageProvider,{initialLanguage:language},createElement(PolicyVersions,{...base,...overrides})));
+const own=render();
+assert.match(own,/>Revision.*1.*draft/);assert.match(own,/>Edit as new draft</);assert.match(own,/<button class="policy-delete">Delete policy<\/button>/);
+assert.match(render({user:'other'}),/<button class="policy-delete" disabled="">Delete policy<\/button>/);
+for(const state of ['active','archived'])assert.match(render({items:[{...base.items[0],state}]}),/<button class="policy-delete" disabled="">Delete policy<\/button>/);
+assert.match(render({items:[{...base.items[0],state:'approval',approver_id:'reviewer'}]}),/<button class="policy-delete" disabled="">Delete policy<\/button>/);
+assert.match(render({},'vi'),/>Xóa policy</);
+console.log('Policy revision row renders Edit and Delete; author, approval and active-state restrictions verified.');

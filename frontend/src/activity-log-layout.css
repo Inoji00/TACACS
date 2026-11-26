@@ -1,0 +1,24 @@
+.activity-log-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2.5fr) minmax(215px, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.activity-log-results { min-width: 0; }
+.activity-log-layout h3 { margin: 0 0 12px; font-size: 16px; }
+.activity-log-layout dl { margin: 0; }
+.activity-log-layout dt { color: var(--muted); }
+.activity-log-layout dd { margin: 3px 0 11px; overflow-wrap: anywhere; }
+.activity-log-layout dd:last-child { margin-bottom: 0; }
+.activity-log-results .activity-log-meta { margin-bottom: 14px; }
+.activity-log-configuration {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel, #fff);
+}
+.activity-log-results .log-table tbody tr:has(.log-result.bad) { background: #fff1f0; }
+@media (max-width: 1020px) {
+  .activity-log-layout { grid-template-columns: minmax(0, 1fr); }
+}

@@ -1,4 +1,5 @@
 """Interactive recovery of the administrator recorded at installation."""
+
 import argparse
 from getpass import GetPassWarning, getpass
 import os
@@ -35,8 +36,12 @@ def reset_admin(connection, tenant: UUID, user: UUID, password: str) -> None:
         if row is None:
             raise PermissionError("administrator unavailable")
         PostgresAuditWriter(None, str(tenant)).append_in_transaction(
-            connection, actor="local-root", source="local-cli",
-            action="admin.password.reset", target=str(user), result="success",
+            connection,
+            actor="local-root",
+            source="local-cli",
+            action="admin.password.reset",
+            target=str(user),
+            result="success",
         )
 
 
@@ -49,7 +54,12 @@ def main() -> int:
         print("Run from a private root terminal.", file=sys.stderr)
         return 1
     try:
-        if input("Reset the installation administrator password and end its Web sessions? Type RESET: ") != "RESET":
+        if (
+            input(
+                "Reset the installation administrator password and end its Web sessions? Type RESET: "
+            )
+            != "RESET"
+        ):
             print("Password reset cancelled.")
             return 1
         with warnings.catch_warnings():
@@ -68,10 +78,14 @@ def main() -> int:
         print("Password reset interrupted. Check the audit trail before retrying.")
         return 1
     except Exception:
-        print("Password reset failed. Check database readiness, schema and administrator state.",
-              file=sys.stderr)
+        print(
+            "Password reset failed. Check database readiness, schema and administrator state.",
+            file=sys.stderr,
+        )
         return 1
-    print("Administrator password reset. Sign in with the new password and your existing MFA settings.")
+    print(
+        "Administrator password reset. Sign in with the new password and your existing MFA settings."
+    )
     return 0
 
 

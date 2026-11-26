@@ -1,0 +1,119 @@
+.workspace .device-editor:not(.ops-editor) {
+  padding: clamp(12px, 1.5vw, 22px);
+  container-type: inline-size;
+}
+.workspace:has(.device-editor:not(.ops-editor)) .page-heading {
+  display: none;
+}
+.workspace .device-editor:not(.ops-editor) > .section-heading {
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+}
+.device-editor:not(.ops-editor) .device-editor-grid h3 {
+  margin: 0 0 8px;
+}
+.workspace .device-editor:not(.ops-editor) .device-editor-grid label {
+  margin-bottom: 8px;
+}
+.workspace .device-editor:not(.ops-editor) .device-editor-fields .form-columns {
+  align-items: end;
+}
+.workspace .device-editor:not(.ops-editor) .field-caption > label {
+  margin: 0;
+}
+.workspace .device-editor:not(.ops-editor) :is(input:not([type]), select, textarea, .device-key-icon) {
+  min-height: 38px;
+  padding-block: 6px;
+}
+.workspace .device-editor:not(.ops-editor) textarea[name="description"] {
+  min-height: 52px;
+  height: 52px;
+}
+.workspace .device-editor:not(.ops-editor) .device-protocol-row {
+  margin-bottom: 10px;
+}
+.workspace .device-editor:not(.ops-editor) .access-mappings {
+  margin: 8px 0;
+  padding: 8px 12px;
+}
+.device-editor:not(.ops-editor) .access-grant {
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+}
+.device-editor:not(.ops-editor) .mapping-advanced {
+  margin-top: 6px;
+}
+.device-editor:not(.ops-editor) .access-mappings > .hint {
+  margin-block: 6px 0;
+}
+.workspace .device-editor:not(.ops-editor) .device-editor-footer {
+  margin-top: 8px;
+  padding-top: 8px;
+}
+.workspace .device-editor:not(.ops-editor) :is(.section-heading, .device-editor-footer, .access-mappings) button:not(.info-button) {
+  min-height: 36px;
+  padding-block: 6px;
+}
+.workspace .device-editor:not(.ops-editor) button.info-button {
+  inline-size: 22px;
+  block-size: 22px;
+  min-inline-size: 22px;
+  min-block-size: 22px;
+  padding: 0;
+  border-radius: 50%;
+}
+.workspace .device-editor:not(.ops-editor) .field-caption {
+  display: inline-flex;
+  align-items: center;
+}
+.workspace .device-editor:not(.ops-editor) .access-grant-main {
+  column-gap: 8px;
+}
+.workspace .device-list :is(th, td) {
+  padding-block: 8px;
+  overflow-wrap: anywhere;
+}
+.device-saved-details {
+  min-width: 0;
+  align-self: start;
+  margin-block: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.device-saved-details h3 {
+  margin: 0;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+.device-saved-details dl {
+  margin: 0;
+  padding: 4px 12px;
+}
+.device-saved-details dl > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  gap: 8px;
+  align-items: baseline;
+  padding-block: 6px;
+  font-size: 12px;
+}
+.device-saved-details dl > div + div { border-top: 1px solid var(--line); }
+.device-saved-details dt { color: var(--muted); }
+.device-saved-details dd { margin: 0; text-align: end; overflow-wrap: anywhere; }
+@container (min-width: 840px) {
+  .device-editor:not(.ops-editor) > form:has(.device-saved-details) {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    column-gap: 16px;
+  }
+  .device-editor:not(.ops-editor) > form:has(.device-saved-details) > :is(.device-editor-grid, .access-mappings, .device-editor-footer) {
+    grid-column: 1;
+  }
+  .device-editor:not(.ops-editor) .device-saved-details {
+    grid-column: 2;
+    grid-row: 1 / 4;
+    margin: 0;
+  }
+}

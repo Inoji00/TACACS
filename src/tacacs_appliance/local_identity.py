@@ -1,10 +1,16 @@
 """Local authentication provider using Argon2id password hashes."""
+
 from __future__ import annotations
 from dataclasses import dataclass
 import threading
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerifyMismatchError
-from .password_timing import DummyPasswordVerifier, bounded_password_work, acceptable_password_hash
+from .password_timing import (
+    DummyPasswordVerifier,
+    bounded_password_work,
+    acceptable_password_hash,
+)
+
 
 @dataclass(slots=True)
 class LocalUser:
@@ -14,11 +20,13 @@ class LocalUser:
     failed_logins: int = 0
     locked: bool = False
 
+
 @dataclass(frozen=True, slots=True)
 class AuthenticationResult:
     authenticated: bool
     subject: str | None = None
     reason: str = "invalid credentials"
+
 
 class LocalProvider:
     """In-memory repository adapter; production will persist this model in PostgreSQL.
@@ -26,8 +34,10 @@ class LocalProvider:
     The externally visible result deliberately does not distinguish unknown,
     disabled, locked, or wrong-password accounts.
     """
+
     def __init__(self, users: dict[str, LocalUser], lockout_after: int = 5) -> None:
-        if lockout_after < 1: raise ValueError("lockout threshold must be positive")
+        if lockout_after < 1:
+            raise ValueError("lockout threshold must be positive")
         self._users, self._lockout_after = users, lockout_after
         self._hasher = PasswordHasher()
         self._dummy = DummyPasswordVerifier()

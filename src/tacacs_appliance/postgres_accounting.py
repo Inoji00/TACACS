@@ -1,4 +1,5 @@
 """Transactional PostgreSQL accounting store using parameterized statements."""
+
 from uuid import UUID, uuid4
 
 from psycopg.types.json import Jsonb
@@ -20,17 +21,35 @@ class PostgresAccountingStore:
             raise ValueError("accounting tenant mismatch")
         with self._pool.connection() as connection:
             with connection.transaction():
-                if connection.execute("SELECT id FROM tenants WHERE id=%s FOR UPDATE", (self._tenant,)).fetchone() is None:
+                if (
+                    connection.execute(
+                        "SELECT id FROM tenants WHERE id=%s FOR UPDATE", (self._tenant,)
+                    ).fetchone()
+                    is None
+                ):
                     raise ValueError("accounting tenant unavailable")
                 record_id = uuid4()
                 connection.execute(
                     "INSERT INTO accounting_records "
                     "(id,tenant_id,session_id,username,device_id,action,arguments) "
                     "VALUES (%s,%s,%s,%s,%s,%s,%s)",
-                    (record_id, self._tenant, record.session_id, record.username,
-                     record.device_id, record.action, Jsonb(list(redact_arguments(record.arguments)))),
+                    (
+                        record_id,
+                        self._tenant,
+                        record.session_id,
+                        record.username,
+                        record.device_id,
+                        record.action,
+                        Jsonb(list(redact_arguments(record.arguments))),
+                    ),
                 )
-                self._audit.append_in_transaction(connection, actor=record.username, source=record.device_id,
-                    action="accounting." + record.action, target=record.device_id,
-                    result="committed", session_id=record.session_id,
-                    security_context={'accounting_record_id': str(record_id)})
+                self._audit.append_in_transaction(
+                    connection,
+                    actor=record.username,
+                    source=record.device_id,
+                    action="accounting." + record.action,
+                    target=record.device_id,
+                    result="committed",
+                    session_id=record.session_id,
+                    security_context={"accounting_record_id": str(record_id)},
+                )

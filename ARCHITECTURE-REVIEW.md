@@ -9,6 +9,29 @@
 
 Đối chiếu cấu hình Compose, các điểm nối API và test cho thấy thay đổi này không cần migration. Tên service, cổng, mount và schema giữ nguyên. Nghiệm thu trên switch và VM vẫn là một bước riêng.
 
-## Điểm cần đồng bộ
+## Source React và bundle phát hành
 
-Checkout phát hành chứa JavaScript đã đóng gói và CSS mà Docker phục vụ. Source React trong workspace Desktop thuộc một cây riêng và có khác biệt về tính năng. Khi xây dựng lại frontend, cần xác định một cây source có đầy đủ các tính năng đang phát hành và kiểm tra đầu ra CI trước khi thay bundle. Bản thay đổi này cập nhật các trường mật khẩu trong bundle hiện đang dùng.
+Source React gốc nằm trong `frontend/`. GitHub Actions cài dependency từ
+`frontend/package-lock.json`, kiểm tra TypeScript, chạy test source và build JavaScript
+vào `artifacts/react-console/`. Lệnh tương ứng trên máy phát triển:
+
+```bash
+npm --prefix frontend ci
+npm --prefix frontend run check
+npm --prefix frontend test
+npm --prefix frontend run build
+```
+
+Docker hiện vẫn phục vụ console đã phát hành từ `src/tacacs_appliance/console/`.
+Build React có đích riêng để tránh ghi đè console đang dùng trước khi xác minh
+tương đương. Các điểm cần đồng bộ trước khi chuyển đầu ra React sang bộ cài gồm
+Device Syslog và quản lý profile, hướng dẫn kết nối Cisco, cấu hình webhook
+Slack/Mattermost và các luồng quản trị cùng kiểm thử song ngữ. Sau khi chuyển,
+CI cần kiểm thử chính bundle sinh từ source và bộ cài phải dùng đúng bundle đã kiểm thử.
+
+Ruff kiểm tra toàn bộ `src/` và `scripts/`:
+
+```bash
+ruff check src scripts
+ruff format --check src scripts
+```

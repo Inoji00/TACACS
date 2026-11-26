@@ -1,0 +1,9 @@
+.log-page-controls,.log-page-summary,.log-page-buttons,.log-page-buttons > span {
+  display:flex;align-items:center;gap:8px;
+}
+.log-page-controls {justify-content:space-between;flex-wrap:wrap;margin-block:12px;color:var(--muted);font-size:12px}
+.log-page-summary {flex-wrap:wrap}
+.workspace .log-page-summary select {width:auto;margin:0;min-height:32px;padding:4px 8px}
+.log-page-buttons {flex-wrap:wrap;gap:4px}
+.workspace .log-page-buttons button {min-width:32px;min-height:32px;padding:4px 7px;font-size:12px}
+.workspace .log-page-buttons button[aria-current=page] {background:var(--accent,#08756b);color:#fff}

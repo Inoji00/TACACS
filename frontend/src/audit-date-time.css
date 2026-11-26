@@ -1,0 +1,47 @@
+
+.logging-workspace .log-filters { align-items: end; padding: 16px; border: 1px solid var(--line); border-radius: 8px; }
+.logging-workspace .log-filters > label { display: grid; gap: 4px; align-content: end; font-size: 12px; min-width: 0; }
+.logging-workspace .log-filters > label > :is(input,select) { height: 36px; min-height: 36px; margin: 0; padding-block: 0; }
+.logging-workspace .log-filters input[maxlength="15"] { font-family: ui-monospace, monospace; }
+.audit-time-range { min-width: 0; position: relative; }
+.audit-time-range > summary { display: grid; gap: 4px; cursor: pointer; color: var(--muted); font-size: 12px; }
+.audit-time-range > summary::-webkit-details-marker { display: none; }
+.audit-time-range > summary strong {
+  display: block; height: 36px; padding: 7px 10px; border: 1px solid var(--line);
+  border-radius: 6px; font-weight: 500; color: inherit; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums;
+}
+.audit-time-range[open] > summary strong { border-color: var(--accent); }
+.audit-time-panel {
+  position: absolute; inset-inline-end: 0; top: calc(100% + 6px); z-index: 8;
+  width: min(410px, calc(100vw - 48px)); padding: 12px;
+  border: 1px solid var(--line); border-radius: 8px;
+  background: var(--surface, #fff); box-shadow: 0 8px 22px #14263b26;
+  display: grid; gap: 12px;
+}
+.audit-presets { display: flex; flex-wrap: wrap; gap: 4px; }
+.audit-presets button { padding: 4px 8px; min-height: 30px; }
+.audit-boundaries { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.audit-boundary { min-width: 0; display: grid; gap: 4px; }
+.audit-boundary input { width: 100%; min-width: 0; }
+.logging-workspace .log-meta { padding: 8px 0; border-bottom: 1px solid var(--line); }
+.logging-workspace .log-table tbody tr:nth-child(even) { background: transparent; }
+.logging-workspace .log-table tbody tr:hover { background: var(--soft, #f1f5f9); }
+.workspace .audit-log-table :is(th,td) {
+  padding: 7px 10px;
+  height: 40px;
+  vertical-align: middle;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.workspace .audit-log-table small { margin-top: 2px; }
+.workspace .audit-log-table :is(th,td).audit-log-result { width: 1%; text-align: center; white-space: nowrap; }
+@media (min-width: 1280px) {
+  .logging-workspace .log-filters { grid-template-columns: repeat(12,minmax(0,1fr)); gap: 8px; }
+  .logging-workspace .log-filters > :is(label,.audit-time-range) { grid-column: span 2; }
+  .logging-workspace .log-filters > label:first-child { grid-column: span 4; }
+}
+@media (max-width: 767px) {
+  .logging-workspace .log-filters { grid-template-columns: minmax(0,1fr); }
+  .audit-time-panel { position: static; width: 100%; margin-top: 6px; }
+}

@@ -1,0 +1,111 @@
+.dashboard-console {
+  --dash-surface: var(--ops-panel, #fff);
+  --dash-ink: var(--ops-text, #192e45);
+  --dash-muted: var(--ops-muted, #52677c);
+  --dash-line: var(--ops-line, #dbe5ef);
+  --dash-teal: var(--ops-accent, #08756b);
+  --dash-good: var(--ops-good, #14694f);
+  --dash-bad: var(--ops-bad, #a42f32);
+  --dash-warn: var(--ops-warn, #805514);
+  --dash-soft: color-mix(in srgb, var(--dash-line) 28%, var(--dash-surface));
+  --dash-selected: color-mix(in srgb, var(--dash-teal) 12%, var(--dash-surface));
+  --dash-warn-soft: color-mix(in srgb, #e9a323 22%, var(--dash-surface));
+  --dash-gap: 16px;
+  --dash-pad: 18px;
+  color: var(--dash-ink);
+  container: dashboard / inline-size;
+}
+
+.dashboard-console .dash-main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--dash-gap);
+  align-items: stretch;
+}
+.dashboard-console .dash-main-grid > .card,
+.dashboard-console .ops-bento > .card,
+.dashboard-console .ops-kpis > .card,
+.dashboard-console .ops-board {
+  min-width: 0;
+  margin: 0;
+  padding: var(--dash-pad);
+  background: var(--dash-surface);
+  color: var(--dash-ink);
+  border: 1px solid var(--dash-line);
+  border-radius: 12px;
+  box-shadow: none;
+}
+.dashboard-console :is(.dash-main-grid, .ops-bento) h2 {
+  min-width: 0;
+  font-size: 15px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.dashboard-console .dash-main-grid > .card > h2 { margin: 0 0 14px; }
+.dashboard-console .dash-main-grid .section-heading { gap: 6px 10px; margin-bottom: 14px; }
+.dashboard-console .dash-main-grid .section-heading h2 { margin: 0; }
+.dashboard-console .dash-icon { color: var(--dash-muted); }
+.dashboard-console .dash-main-grid > .dash-system { grid-area: system; }
+.dashboard-console .dash-main-grid > .dash-host { grid-area: services; }
+.dashboard-console .dash-main-grid > .dash-resource-panel { grid-area: resources; }
+.dashboard-console .dash-main-grid > .dash-activity { grid-area: activity; }
+.dashboard-console .dash-main-grid > .dash-failures { grid-area: failures; }
+.dashboard-console .dash-main-grid > .dash-inventory-panel { grid-area: inventory; }
+.dashboard-console .dash-main-grid > .dash-changes-panel { grid-area: changes; }
+.dashboard-console .dash-main-grid {
+  grid-template-areas: 'system' 'services' 'resources' 'activity' 'failures' 'inventory' 'changes';
+}
+
+.dashboard-console .dash-facts > div { padding: 10px 0; }
+.dashboard-console :is(.dash-facts > div, .dash-timeline > div, .dash-chart-service-total) { border-color: var(--dash-line); }
+.dashboard-console :is(.dash-facts dt, .dash-timeline span, .dash-timeline time, .dash-service-status, .dash-service-metrics, .dash-service-latency) { color: var(--dash-muted); }
+.dashboard-console .dash-service-status.good { color: var(--dash-good); }
+.dashboard-console .dash-service-status.bad { color: var(--dash-bad); }
+.dashboard-console .dash-dot.good { background: var(--dash-good); }
+.dashboard-console .dash-dot.bad { background: var(--dash-bad); }
+.dashboard-console .dash-service-list { gap: 8px; }
+.dashboard-console .dash-resource-gauges { max-width: 420px; margin-inline: auto; }
+.dashboard-console .dash-gauge-track { stroke: var(--dash-line); }
+.dashboard-console :is(.dash-inventory .dash-inventory-tile, .dash-auth-metrics > div) {
+  background: var(--dash-soft);
+  border: 1px solid var(--dash-line);
+  border-radius: 8px;
+}
+.dashboard-console .dash-inventory button.dash-inventory-tile:hover { background: var(--dash-selected); border-color: var(--dash-teal); }
+.dashboard-console .dash-inventory .dash-inventory-tile { min-height: 72px; }
+.dashboard-console .dash-timeline > div { padding-block: 10px; }
+.dashboard-console .dash-timeline i { background: var(--dash-teal); }
+.dashboard-console .dash-timeline time { white-space: normal; }
+
+.dashboard-console button.dash-text-button { color: var(--dash-teal); background: transparent; }
+.dashboard-console :is(.dash-chart-range, button.dash-chart-view) { background: var(--dash-soft); border-radius: 6px; }
+.dashboard-console .dash-chart-range button { color: var(--dash-ink); background: transparent; }
+.dashboard-console .dash-chart-range button[aria-pressed='true'] { color: var(--dash-teal); background: var(--dash-selected); }
+.dashboard-console :is(button, .dash-chart-slot):focus-visible { outline: 2px solid var(--dash-teal); }
+.dashboard-console .dash-chart-columns { background-image: repeating-linear-gradient(to bottom, var(--dash-line) 0 1px, transparent 1px 25%); }
+.dashboard-console .dash-chart-columns .dash-chart-slot > span { border-color: var(--dash-line); }
+.dashboard-console :is(.dash-chart-pass, .chart-pass) { background: var(--dash-good); }
+.dashboard-console :is(.dash-chart-fail, .chart-fail) { background: var(--dash-bad); }
+.dashboard-console .dash-chart-tooltip { color: var(--dash-ink); background: var(--dash-surface); border-color: var(--dash-line); }
+.dashboard-console .dash-chart-tooltip-pass { color: var(--dash-good); }
+.dashboard-console .dash-chart-tooltip-fail { color: var(--dash-bad); }
+
+.dashboard-console .ops-bento { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: var(--dash-gap); }
+.dashboard-console :is(.ops-trend, .ops-bento > .dash-auth-card) { grid-column: 1 / -1; }
+
+@container dashboard (min-width: 680px) {
+  .dashboard-console .dash-main-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas: 'system services' 'resources resources' 'activity failures' 'inventory changes';
+  }
+}
+@container dashboard (min-width: 1080px) {
+  .dashboard-console .dash-main-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-areas: 'system services resources' 'activity activity failures' 'inventory changes changes';
+  }
+}
+@container dashboard (max-width: 520px) {
+  .dashboard-console :is(.ops-bento, .ops-board-grid) { grid-template-columns: minmax(0, 1fr); }
+  .dashboard-console .dash-main-grid > .card { padding: 14px; }
+}

@@ -54,17 +54,41 @@ def validate_runtime_role(connection) -> None:
 
 def validate_admin_role(connection) -> None:
     validate_unprivileged_role(connection)
-    immutable = ("audit_events", "policy_test_reports", "policy_simulation_reports", "schema_migrations", "device_runtime_observations", "policy_retirements")
+    immutable = (
+        "audit_events",
+        "policy_test_reports",
+        "policy_simulation_reports",
+        "schema_migrations",
+        "device_runtime_observations",
+        "policy_retirements",
+    )
     for table in immutable:
-        privileges = ("UPDATE", "DELETE", "TRUNCATE") + (("INSERT",) if table in ("schema_migrations", "device_runtime_observations") else ())
+        privileges = ("UPDATE", "DELETE", "TRUNCATE") + (
+            ("INSERT",)
+            if table in ("schema_migrations", "device_runtime_observations")
+            else ()
+        )
         for privilege in privileges:
-            function='has_any_column_privilege' if privilege in ('UPDATE','INSERT') else 'has_table_privilege'
+            function = (
+                "has_any_column_privilege"
+                if privilege in ("UPDATE", "INSERT")
+                else "has_table_privilege"
+            )
             # has_any_column_privilege includes whole-table grants as well as
             # grants on a single column; DELETE/TRUNCATE are table-only.
-            row = connection.execute('SELECT '+function+'(current_user,%s,%s)', (table, privilege)).fetchone()
+            row = connection.execute(
+                "SELECT " + function + "(current_user,%s,%s)", (table, privilege)
+            ).fetchone()
             if row is None or row[0]:
-                raise ValueError("administrator role has forbidden evidence mutation privileges")
+                raise ValueError(
+                    "administrator role has forbidden evidence mutation privileges"
+                )
     for privilege in ("DELETE", "TRUNCATE"):
-        row=connection.execute("SELECT has_table_privilege(current_user,'policy_versions',%s)",(privilege,)).fetchone()
+        row = connection.execute(
+            "SELECT has_table_privilege(current_user,'policy_versions',%s)",
+            (privilege,),
+        ).fetchone()
         if row is None or row[0]:
-            raise ValueError("administrator role has forbidden policy history deletion privileges")
+            raise ValueError(
+                "administrator role has forbidden policy history deletion privileges"
+            )

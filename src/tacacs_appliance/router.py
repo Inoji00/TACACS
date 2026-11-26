@@ -1,4 +1,5 @@
 """AAA routing boundary; protocol codecs remain independent of dependencies."""
+
 from collections.abc import Callable
 
 from .protocol import AUTHENTICATION, AUTHORIZATION, ACCOUNTING, Frame
@@ -9,8 +10,12 @@ Handler = Callable[[str, Frame], bytes | None]
 
 
 class TacacsRouter:
-    def __init__(self, authentication: TacacsAuthenticationHandler,
-                 authorization: Handler, accounting: Handler):
+    def __init__(
+        self,
+        authentication: TacacsAuthenticationHandler,
+        authorization: Handler,
+        accounting: Handler,
+    ):
         self._authentication = authentication
         self._authorization = authorization
         self._accounting = accounting
@@ -18,8 +23,9 @@ class TacacsRouter:
 
     def new_connection(self) -> "TacacsRouter":
         """Separate authentication challenges while sharing stateless services."""
-        return TacacsRouter(self._authentication.new_connection(),
-                            self._authorization, self._accounting)
+        return TacacsRouter(
+            self._authentication.new_connection(), self._authorization, self._accounting
+        )
 
     def authentication_username(self):
         """Username from START or a validated GETUSER response."""

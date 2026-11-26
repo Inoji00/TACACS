@@ -1,4 +1,5 @@
 """Run committed unittest cases and record counts without treating skips as passes."""
+
 import argparse
 from datetime import datetime, timezone
 import json
@@ -40,7 +41,9 @@ def run(*, pattern="test*.py", report=None, exclude=()):
         "python": sys.version.split()[0],
         "run": result.testsRun,
         "passed": result.passed,
-        "skipped": [{"test": test.id(), "reason": reason} for test, reason in result.skipped],
+        "skipped": [
+            {"test": test.id(), "reason": reason} for test, reason in result.skipped
+        ],
         "failures": [test.id() for test, _ in result.failures],
         "errors": [test.id() for test, _ in result.errors],
         "expected_failures": [test.id() for test, _ in result.expectedFailures],
@@ -52,8 +55,10 @@ def run(*, pattern="test*.py", report=None, exclude=()):
         path = Path(report)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(evidence, indent=2) + "\n", encoding="utf-8")
-    print(f"Passed: {len(result.passed)}; skipped: {len(result.skipped)}; "
-          f"excluded: {len(excluded)}; failures: {len(result.failures)}; errors: {len(result.errors)}")
+    print(
+        f"Passed: {len(result.passed)}; skipped: {len(result.skipped)}; "
+        f"excluded: {len(excluded)}; failures: {len(result.failures)}; errors: {len(result.errors)}"
+    )
     return 0 if evidence["successful"] else 1
 
 
@@ -61,6 +66,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--pattern", default="test*.py")
     parser.add_argument("--report")
-    parser.add_argument("--exclude", action="append", default=[], help="Explicit module exclusion, recorded in report")
+    parser.add_argument(
+        "--exclude",
+        action="append",
+        default=[],
+        help="Explicit module exclusion, recorded in report",
+    )
     args = parser.parse_args()
-    raise SystemExit(run(pattern=args.pattern, report=args.report, exclude=args.exclude))
+    raise SystemExit(
+        run(pattern=args.pattern, report=args.report, exclude=args.exclude)
+    )

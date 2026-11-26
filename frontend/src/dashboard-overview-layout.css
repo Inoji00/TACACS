@@ -1,0 +1,33 @@
+.aaa-dashboard{--overview-accent:#0b7a66;--overview-border:#e2e8f0;--overview-critical:#9d2738;font-family:Inter,system-ui,sans-serif}
+.aaa-dashboard .card{border:1px solid var(--overview-border);border-radius:8px;padding:16px;box-shadow:none}
+.aaa-dashboard .overview-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:24px}
+.aaa-dashboard .overview-kpi{display:grid;gap:8px;text-align:left;color:#18283c;background:#fff;min-width:0}
+.aaa-dashboard .overview-kpi:hover{background:#f3faf8;border-color:#8ebdb4}
+.aaa-dashboard .overview-kpi>span{font-size:12px;color:#526479}
+.aaa-dashboard .overview-kpi>strong{font-size:26px;font-variant-numeric:tabular-nums}
+.aaa-dashboard .overview-critical>strong{color:var(--overview-critical)}
+.aaa-dashboard .dash-main-grid{grid-template-columns:repeat(12,minmax(0,1fr));gap:24px;align-items:stretch}
+.aaa-dashboard .dash-main-grid>.overview-system{grid-column:span 3}
+.aaa-dashboard .dash-main-grid>.dash-host{grid-column:span 9}
+.aaa-dashboard .dash-main-grid>.dash-activity{grid-column:span 8}
+.aaa-dashboard .dash-main-grid>.dash-failures,.aaa-dashboard .dash-main-grid>.dash-resource-panel,.aaa-dashboard .dash-main-grid>.overview-inventory,.aaa-dashboard .dash-main-grid>.overview-changes{grid-column:span 4}
+.aaa-dashboard .dash-host .dash-service-list{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.aaa-dashboard .dash-host .dash-service-list>li{padding:8px;border:1px solid var(--overview-border);border-radius:8px}
+.aaa-dashboard .dash-resource-gauges{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding:0;list-style:none}
+.aaa-dashboard .overview-resource-label{display:flex;justify-content:space-between;gap:8px;font-size:12px}
+.aaa-dashboard meter{display:block;width:100%;height:12px;accent-color:var(--overview-accent)}
+.aaa-dashboard meter::-webkit-meter-optimum-value{background:var(--overview-accent)}
+.aaa-dashboard meter.warning::-webkit-meter-optimum-value{background:#a76512}
+.aaa-dashboard meter.critical::-webkit-meter-optimum-value{background:var(--overview-critical)}
+.aaa-dashboard :is(button,a):focus-visible{outline:2px solid var(--overview-accent);outline-offset:2px}
+@media(max-width:1279px){
+ .aaa-dashboard .dash-main-grid{gap:16px}
+ .aaa-dashboard .dash-main-grid>:is(.overview-system,.dash-host,.dash-activity,.dash-failures,.dash-resource-panel,.overview-inventory,.overview-changes){grid-column:span 6}
+ .aaa-dashboard .dash-host .dash-service-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:767px){
+ .aaa-dashboard .overview-kpis{display:flex;overflow:auto;padding:3px;margin-bottom:16px}
+ .aaa-dashboard .overview-kpi{flex:0 0 148px}
+ .aaa-dashboard .dash-main-grid{grid-template-columns:minmax(0,1fr)}
+ .aaa-dashboard .dash-main-grid>:is(.overview-system,.dash-host,.dash-activity,.dash-failures,.dash-resource-panel,.overview-inventory,.overview-changes){grid-column:1}
+}

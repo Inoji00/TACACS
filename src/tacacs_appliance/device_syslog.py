@@ -1,4 +1,5 @@
 """Bounded UDP device syslog collection and read-only search."""
+
 import argparse
 from contextlib import closing
 from datetime import datetime, timezone
@@ -39,7 +40,9 @@ def writer(path):
         facility INTEGER, severity INTEGER, message TEXT NOT NULL
     )""")
     db.execute("CREATE INDEX IF NOT EXISTS events_received ON events(received, id)")
-    db.execute("CREATE INDEX IF NOT EXISTS events_source ON events(source, received, id)")
+    db.execute(
+        "CREATE INDEX IF NOT EXISTS events_source ON events(source, received, id)"
+    )
     db.commit()
     return db
 
@@ -57,14 +60,25 @@ def prune(db, now):
 
 
 def ready():
-    with closing(sqlite3.connect(DATABASE.as_uri() + "?mode=ro", uri=True, timeout=2)) as db:
+    with closing(
+        sqlite3.connect(DATABASE.as_uri() + "?mode=ro", uri=True, timeout=2)
+    ) as db:
         db.execute("SELECT id FROM events LIMIT 1").fetchone()
 
 
 def search(query, path=DATABASE, *, profiles=None):
     from .syslog_profiles import KINDS, read_profiles
+
     fields = parse_qs(query, keep_blank_values=True, max_num_fields=7)
-    if not fields.keys() <= {"source", "severity", "since", "until", "q", "before", "profile"}:
+    if not fields.keys() <= {
+        "source",
+        "severity",
+        "since",
+        "until",
+        "q",
+        "before",
+        "profile",
+    }:
         raise ValueError("unknown filter")
     if any(len(values) != 1 or len(values[0]) > 256 for values in fields.values()):
         raise ValueError("invalid filter")
@@ -81,7 +95,11 @@ def search(query, path=DATABASE, *, profiles=None):
     profile = values.get("profile")
     if profile:
         unclassified = profile == "unclassified"
-        matches = [ip for ip, item in profiles.items() if unclassified or item["profile"] == profile]
+        matches = [
+            ip
+            for ip, item in profiles.items()
+            if unclassified or item["profile"] == profile
+        ]
         if matches:
             operator = "NOT IN" if unclassified else "IN"
             where.append(f"source {operator} ({','.join('?' for _ in matches)})")
@@ -111,15 +129,32 @@ def search(query, path=DATABASE, *, profiles=None):
         args.append(before)
     if not path.is_file():
         return {"items": [], "next_before": None, "collector_ready": False}
-    with closing(sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True, timeout=2)) as db:
+    with closing(
+        sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True, timeout=2)
+    ) as db:
         db.row_factory = sqlite3.Row
         deadline = time.monotonic() + 2
         db.set_progress_handler(lambda: int(time.monotonic() > deadline), 1000)
-        rows = db.execute("SELECT * FROM events WHERE " + " AND ".join(where)
-                          + " ORDER BY id DESC LIMIT 101", args).fetchall()
-    return {"items": [{**dict(row), **profiles.get(row["source"], {}), "received": datetime.fromtimestamp(
-                row["received"], timezone.utc).isoformat()} for row in rows[:100]],
-            "next_before": rows[99]["id"] if len(rows) > 100 else None, "collector_ready": True}
+        rows = db.execute(
+            "SELECT * FROM events WHERE "
+            + " AND ".join(where)
+            + " ORDER BY id DESC LIMIT 101",
+            args,
+        ).fetchall()
+    return {
+        "items": [
+            {
+                **dict(row),
+                **profiles.get(row["source"], {}),
+                "received": datetime.fromtimestamp(
+                    row["received"], timezone.utc
+                ).isoformat(),
+            }
+            for row in rows[:100]
+        ],
+        "next_before": rows[99]["id"] if len(rows) > 100 else None,
+        "collector_ready": True,
+    }
 
 
 def collect(port):
@@ -128,8 +163,13 @@ def collect(port):
         listener.settimeout(0.25)
         db = writer(DATABASE)
         from .syslog_archive import run
-        Thread(target=run, args=(DATABASE, RETENTION_SECONDS),
-               name="device-syslog-archive", daemon=True).start()
+
+        Thread(
+            target=run,
+            args=(DATABASE, RETENTION_SECONDS),
+            name="device-syslog-archive",
+            daemon=True,
+        ).start()
         pending = []
         maintenance = 0
         flush = time.monotonic() + 0.25
@@ -143,7 +183,10 @@ def collect(port):
                 pending.append((now, peer[0], *parse_message(data)))
             if pending and (len(pending) >= 128 or time.monotonic() >= flush):
                 with db:
-                    db.executemany("INSERT INTO events(received,source,facility,severity,message) VALUES (?,?,?,?,?)", pending)
+                    db.executemany(
+                        "INSERT INTO events(received,source,facility,severity,message) VALUES (?,?,?,?,?)",
+                        pending,
+                    )
                 pending.clear()
                 flush = time.monotonic() + 0.25
             if now >= maintenance:

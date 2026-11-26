@@ -34,7 +34,9 @@ def xor_body(frame: Frame, secret: bytes) -> bytes:
     return bytes(value ^ mask for value, mask in zip(frame.body, pad, strict=True))
 
 
-def _pseudo_pad(*, session_id: int, secret: bytes, version: int, sequence: int, length: int) -> bytes:
+def _pseudo_pad(
+    *, session_id: int, secret: bytes, version: int, sequence: int, length: int
+) -> bytes:
     """Create MD5_1 || MD5_2 ... as specified by RFC 8907 section 4.5."""
 
     seed = struct.pack("!I", session_id) + secret + bytes((version, sequence))

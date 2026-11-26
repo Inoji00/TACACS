@@ -1,4 +1,5 @@
 """Process entry point; transport/API composition is intentionally explicit."""
+
 import logging
 import argparse
 from pathlib import Path
@@ -7,10 +8,16 @@ import threading
 from .runtime import RuntimeConfig, build_listener, open_pool
 from .metrics import Metrics
 from .health import create_health_server
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Local TACACS+ AAA service")
     parser.add_argument("--config", required=True, type=Path)
-    parser.add_argument("--health-port", type=int, help="enable loopback health/metrics on this TCP port")
+    parser.add_argument(
+        "--health-port",
+        type=int,
+        help="enable loopback health/metrics on this TCP port",
+    )
     args = parser.parse_args()
     if args.health_port is not None and not 1 <= args.health_port <= 65535:
         parser.error("health port must be in 1..65535")
@@ -29,12 +36,17 @@ def main() -> int:
         listener = build_listener(config, pool, metrics=metrics)
         listener.start()
         if args.health_port is not None:
+
             def ready():
                 if stop.is_set() or listener.address is None:
                     return False
                 with pool.connection() as connection:
                     return connection.execute("SELECT 1").fetchone() == (1,)
-            health = create_health_server(("127.0.0.1", args.health_port), ready, metrics=metrics.prometheus)
+
+            health = create_health_server(
+                ("127.0.0.1", args.health_port), ready, metrics=metrics.prometheus
+            )
+
             def serve_health():
                 try:
                     health.serve_forever()
@@ -42,8 +54,10 @@ def main() -> int:
                     failed.set()
                     stop.set()
                     log.error('{"event":"MONITORING_FAILED"}')
+
             health_thread = threading.Thread(target=serve_health, name="tacacs-health")
             health_thread.start()
+
         def serve():
             try:
                 listener.serve_forever()
@@ -52,6 +66,7 @@ def main() -> int:
                 log.error('{"event":"LISTENER_FAILED"}')
             finally:
                 stop.set()
+
         for signum in (signal.SIGINT, signal.SIGTERM):
             previous[signum] = signal.signal(signum, lambda *_: stop.set())
         thread = threading.Thread(target=serve, name="tacacs-listener")
@@ -64,6 +79,7 @@ def main() -> int:
         exit_code = 1
     finally:
         stop.set()
+
         def cleanup(action):
             nonlocal exit_code
             try:
@@ -71,6 +87,7 @@ def main() -> int:
             except Exception:
                 exit_code = 1
                 log.error('{"event":"CLEANUP_FAILED","service":"tacacs"}')
+
         if health is not None:
             if health_thread is not None and health_thread.is_alive():
                 cleanup(health.shutdown)
@@ -84,8 +101,9 @@ def main() -> int:
         if pool is not None:
             cleanup(pool.close)
         for signum, handler in previous.items():
-            cleanup(lambda s=signum,h=handler: signal.signal(s,h))
+            cleanup(lambda s=signum, h=handler: signal.signal(s, h))
     return exit_code
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

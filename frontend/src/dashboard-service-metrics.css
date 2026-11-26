@@ -1,0 +1,16 @@
+.dash-service-row .dash-service-status {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+}
+.dash-service-row :is(.dash-service-latency, .dash-service-metrics) {
+  color: var(--muted, #52677c);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.dash-service-row .dash-service-metrics {
+  margin-inline-start: auto;
+  text-align: end;
+  white-space: nowrap;
+}

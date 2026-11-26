@@ -1,4 +1,5 @@
 """Server-side group membership scoped to a configured tenant."""
+
 from uuid import UUID
 
 

@@ -90,8 +90,22 @@ def encode_frame(header: Header, body: bytes, limits: Limits = Limits()) -> byte
     The caller must set an even server sequence number; this boundary prevents
     accidental length/header disagreement in network replies.
     """
-    response = Header(header.version, header.packet_type, header.sequence, header.flags, header.session_id, len(body))
+    response = Header(
+        header.version,
+        header.packet_type,
+        header.sequence,
+        header.flags,
+        header.session_id,
+        len(body),
+    )
     response.validate(limits)
     if response.sequence % 2:
         raise ProtocolError("server TACACS+ response sequence must be even")
-    return bytes((response.version,response.packet_type,response.sequence,response.flags))+response.session_id.to_bytes(4,"big")+response.length.to_bytes(4,"big")+body
+    return (
+        bytes(
+            (response.version, response.packet_type, response.sequence, response.flags)
+        )
+        + response.session_id.to_bytes(4, "big")
+        + response.length.to_bytes(4, "big")
+        + body
+    )

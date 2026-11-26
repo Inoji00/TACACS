@@ -1,4 +1,5 @@
 """Daily, regenerable text archives of the Device Syslog database."""
+
 from contextlib import closing
 from datetime import date, datetime, time, timedelta, timezone
 import ipaddress
@@ -42,19 +43,34 @@ def write_day(db, directory, source, day, cutoff, high_id):
         "SELECT received, message FROM events "
         "WHERE source = ? AND received >= ? AND received < ? AND id <= ? "
         "ORDER BY received, id",
-        (source, max(cutoff, day_start(day)), day_start(day + timedelta(days=1)), high_id),
+        (
+            source,
+            max(cutoff, day_start(day)),
+            day_start(day + timedelta(days=1)),
+            high_id,
+        ),
     )
     first = rows.fetchone()
     if first is None:
         target.unlink(missing_ok=True)
         return
-    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", newline="\n",
-                                     prefix=".writing-", dir=directory, delete=False) as temp:
+    with tempfile.NamedTemporaryFile(
+        mode="w",
+        encoding="utf-8",
+        newline="\n",
+        prefix=".writing-",
+        dir=directory,
+        delete=False,
+    ) as temp:
         try:
             for stamp, message in chain((first,), rows):
                 # Preserve readable payload and keep every event on exactly one line.
-                safe = message if message.isprintable() else "".join(
-                    c if c.isprintable() else f"\\u{ord(c):04x}" for c in message
+                safe = (
+                    message
+                    if message.isprintable()
+                    else "".join(
+                        c if c.isprintable() else f"\\u{ord(c):04x}" for c in message
+                    )
                 )
                 stamp_text = datetime.fromtimestamp(stamp, VIETNAM_TIME).isoformat()
                 temp.write(f"{stamp_text} {source} {safe}\n")
@@ -89,7 +105,11 @@ def refresh_archives(db, root, cursor, now, retention):
                 affected.add((source, day_for(received)))
         cursor = rows[-1][0]
     for directory in root.iterdir():
-        if directory.is_symlink() or not directory.is_dir() or not valid_source(directory.name):
+        if (
+            directory.is_symlink()
+            or not directory.is_dir()
+            or not valid_source(directory.name)
+        ):
             continue
         for path in directory.iterdir():
             if rebuild and path.name.startswith(".writing-") and path.is_file():
@@ -115,8 +135,12 @@ def run(database, retention):
     root = database.parent / "archive"
     while True:
         try:
-            with closing(sqlite3.connect(database.as_uri() + "?mode=ro", uri=True, timeout=2)) as db:
-                cursor = refresh_archives(db, root, cursor, int(clock.time()), retention)
+            with closing(
+                sqlite3.connect(database.as_uri() + "?mode=ro", uri=True, timeout=2)
+            ) as db:
+                cursor = refresh_archives(
+                    db, root, cursor, int(clock.time()), retention
+                )
         except (OSError, sqlite3.Error):
             LOG.warning("Device Syslog archive sync failed; will retry")
         clock.sleep(INTERVAL)

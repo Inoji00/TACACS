@@ -1,0 +1,71 @@
+.dash-failures .dash-failed-auth-wrap { container-type: inline-size; min-width: 0; }
+
+.aaa-dashboard .dash-table.dash-failed-auth {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+  font-variant-numeric: tabular-nums;
+}
+
+.aaa-dashboard .dash-failed-auth :is(th, td) {
+  padding: 6px 3px;
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+.aaa-dashboard .dash-failed-auth th {
+  font-size: 11px;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.aaa-dashboard .dash-failed-auth th:nth-child(1) { width: 19%; }
+.aaa-dashboard .dash-failed-auth th:nth-child(2) { width: 25%; }
+.aaa-dashboard .dash-failed-auth th:nth-child(3) { width: 20%; }
+.aaa-dashboard .dash-failed-auth th:nth-child(4) { width: 36%; }
+.aaa-dashboard .dash-failed-auth :is(th, td):nth-child(3) { text-align: center; }
+.aaa-dashboard .dash-failed-auth :is(th, td):last-child { text-align: end; }
+.aaa-dashboard .dash-failed-auth :is(time, code) { white-space: nowrap; }
+.aaa-dashboard .dash-failed-auth code { padding-inline: 0; font-size: 10px; }
+.aaa-dashboard .dash-failed-auth time { font-size: 11px; }
+.aaa-dashboard .dash-failed-auth .dash-auth-username {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.aaa-dashboard .dash-failed-auth .dash-auth-field-label { display: none; }
+
+@container (width < 380px) {
+  .aaa-dashboard .dash-failed-auth :is(tbody, tr) { display: block; }
+  .aaa-dashboard .dash-failed-auth thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    clip-path: inset(50%);
+    overflow: hidden;
+  }
+  .aaa-dashboard .dash-failed-auth tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0 8px;
+    padding: 4px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .aaa-dashboard .dash-failed-auth tbody td:nth-child(n) {
+    display: block;
+    text-align: start;
+    padding: 4px 0;
+    min-width: 0;
+    border: 0;
+  }
+  .aaa-dashboard .dash-failed-auth .dash-auth-field-label {
+    display: block;
+    color: var(--dash-muted);
+    font-size: 10px;
+    margin-bottom: 2px;
+  }
+}
+@container (max-width: 280px) {
+  .aaa-dashboard .dash-failed-auth tbody tr { grid-template-columns: minmax(0, 1fr); }
+}
