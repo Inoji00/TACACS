@@ -86,6 +86,25 @@ class AdminApiTests(unittest.TestCase):
         result["body"] = json.loads(b"".join(self.app(environ, start)))
         return result
 
+    def test_login_password_work_timeout_returns_503_without_failed_login_audit(self):
+        from tacacs_appliance.password_timing import PasswordWorkUnavailable
+
+        login = Mock()
+        login.login.side_effect = PasswordWorkUnavailable
+        audit = Mock()
+        self.app = AdminApi(self.sessions, self.permissions, b"k" * 32,
+                            "https://admin.local", login=login, web_audit=audit)
+        payload = b'{"username":"example","password":"test-only","factor_id":"","code":""}'
+        response = self.request(
+            PATH_INFO="/api/login", REQUEST_METHOD="POST", REMOTE_ADDR="192.0.2.10",
+            HTTP_ORIGIN="https://admin.local", CONTENT_TYPE="application/json",
+            CONTENT_LENGTH=str(len(payload)), **{"wsgi.input": io.BytesIO(payload)},
+        )
+        self.assertEqual(response["status"], "503 Service Unavailable")
+        self.assertNotIn("Set-Cookie", response["headers"])
+        login.login.assert_called_once()
+        audit.assert_not_called()
+
     def test_device_operator_cannot_grant_web_access(self):
         identities=Mock()
         operator=Mock(return_value=True)

@@ -6,8 +6,13 @@ from argon2 import PasswordHasher, extract_parameters
 from argon2.low_level import Type
 from argon2.exceptions import VerifyMismatchError, InvalidHashError
 
-# Shared across provider instances, TACACS workers and admin login composition.
+# Shared by password operations within each process.
 PASSWORD_WORK_SLOTS = threading.BoundedSemaphore(4)
+PASSWORD_WORK_WAIT_SECONDS = 1.5
+
+
+class PasswordWorkUnavailable(RuntimeError):
+    """No password-work slot became available before the deadline."""
 
 
 def acceptable_password_hash(encoded: str) -> bool:
@@ -26,9 +31,8 @@ def acceptable_password_hash(encoded: str) -> bool:
 def bounded_password_work(method):
     @wraps(method)
     def authenticate(*args,**kwargs):
-        if not PASSWORD_WORK_SLOTS.acquire(blocking=False):
-            from .local_identity import AuthenticationResult
-            return AuthenticationResult(False)
+        if not PASSWORD_WORK_SLOTS.acquire(timeout=PASSWORD_WORK_WAIT_SECONDS):
+            raise PasswordWorkUnavailable("password service temporarily unavailable")
         try:
             return method(*args,**kwargs)
         finally:

@@ -1,8 +1,10 @@
 import unittest
+from unittest.mock import Mock
 from argon2 import PasswordHasher
 from tacacs_appliance.authentication import AuthenticationContinue, AuthenticationStart
 from tacacs_appliance.authentication_service import AuthenticationService, STATUS_ERROR, STATUS_FAIL, STATUS_GETPASS, STATUS_PASS
 from tacacs_appliance.local_identity import LocalProvider, LocalUser
+from tacacs_appliance.password_timing import PasswordWorkUnavailable
 
 class AuthenticationServiceTests(unittest.TestCase):
     def setUp(self):
@@ -24,3 +26,12 @@ class AuthenticationServiceTests(unittest.TestCase):
         for flags in (1, 2, 255):
             with self.subTest(flags=flags):
                 self.assertEqual(self.service.continue_password(pending, AuthenticationContinue("good-password", b"", flags)).status, STATUS_FAIL)
+
+
+    def test_password_work_timeout_returns_service_error(self):
+        provider = Mock()
+        provider.authenticate.side_effect = PasswordWorkUnavailable
+        service = AuthenticationService(provider)
+        _, pending = service.begin(self._start())
+        reply = service.continue_password(pending, AuthenticationContinue("password", b"", 0))
+        self.assertEqual(reply.status, STATUS_ERROR)

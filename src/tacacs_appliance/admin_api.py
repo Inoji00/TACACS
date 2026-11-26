@@ -31,6 +31,17 @@ def lan_admin_origin(address, domain=None):
     return f'https://{ip}:8443'
 
 
+
+def _read_body(environ, limit):
+    length = int(environ.get("CONTENT_LENGTH", ""))
+    if not 1 <= length <= limit:
+        raise ValueError("invalid body size")
+    raw = environ["wsgi.input"].read(length)
+    if len(raw) != length:
+        raise ValueError("incomplete body")
+    return raw
+
+
 class AdminApi:
     def __init__(self, sessions, permissions, csrf_key: bytes, origin: str, *, login=None, policies=None,audit=None,simulation=None,password_only=False,password_change=None,inventory=None,identities=None,devices=None,device_audit=None,accounting=None,deployment=None,lan_ip=None,dashboard=None,logs=None,device_operator=None,lan_domain=None,web_audit=None,alerts=None):
         from urllib.parse import urlsplit
@@ -121,12 +132,7 @@ class AdminApi:
             if environ.get("CONTENT_TYPE") != "application/json":
                 return respond("415 Unsupported Media Type", {"error": "JSON required"})
             try:
-                length = int(environ.get("CONTENT_LENGTH", ""))
-                if not 1 <= length <= 8192:
-                    raise ValueError("invalid body size")
-                raw = environ["wsgi.input"].read(length)
-                if len(raw) != length:
-                    raise ValueError("incomplete request")
+                raw = _read_body(environ, 8192)
                 def unique_fields(pairs):
                     result = {}
                     for key, value in pairs:
@@ -201,12 +207,9 @@ class AdminApi:
                 if method != "POST":
                     return respond("405 Method Not Allowed", {"error": "method not allowed"})
                 try:
-                    length = int(environ.get("CONTENT_LENGTH", ""))
-                    if environ.get("CONTENT_TYPE") != "application/json" or not 1 <= length <= 1024:
+                    if environ.get("CONTENT_TYPE") != "application/json":
                         raise ValueError("invalid body")
-                    raw = environ["wsgi.input"].read(length)
-                    if len(raw) != length:
-                        raise ValueError("incomplete body")
+                    raw = _read_body(environ, 1024)
                     change = validate_change(json.loads(raw))
                     if self._web_audit is None:
                         raise RuntimeError("profile audit unavailable")
@@ -240,12 +243,9 @@ class AdminApi:
                 if method != 'POST':
                     return respond('405 Method Not Allowed', {'error': 'method not allowed'})
                 try:
-                    length = int(environ.get('CONTENT_LENGTH', ''))
-                    if environ.get('CONTENT_TYPE') != 'application/json' or not 1 <= length <= 4096:
-                        raise ValueError('invalid body')
-                    raw = environ['wsgi.input'].read(length)
-                    if len(raw) != length:
-                        raise ValueError('incomplete body')
+                    if environ.get('CONTENT_TYPE') != 'application/json':
+                        raise ValueError("invalid body")
+                    raw = _read_body(environ, 4096)
                     def alert_fields(pairs):
                         fields = {}
                         for key, value in pairs:
@@ -342,10 +342,7 @@ class AdminApi:
                     if limited and not self._device_write_limiter.allow(user_id):
                         return respond('429 Too Many Requests', {'error': 'retry later'})
                     if environ.get('CONTENT_TYPE')!='application/json' or environ.get('QUERY_STRING',''):raise ValueError()
-                    length=int(environ.get('CONTENT_LENGTH',''))
-                    if not 1<=length<=16384:raise ValueError()
-                    raw=environ['wsgi.input'].read(length)
-                    if len(raw)!=length:raise ValueError()
+                    raw = _read_body(environ, 16384)
                     def device_fields(pairs):
                         result={}
                         for key,value in pairs:
@@ -385,10 +382,7 @@ class AdminApi:
                 if not self._permissions(user_id,'users.manage'):return respond('403 Forbidden',{'error':'permission denied'})
                 try:
                     if environ.get('CONTENT_TYPE')!='application/json' or environ.get('QUERY_STRING',''):raise ValueError()
-                    length=int(environ.get('CONTENT_LENGTH',''))
-                    if not 1<=length<=16384:raise ValueError()
-                    raw=environ['wsgi.input'].read(length)
-                    if len(raw)!=length:raise ValueError()
+                    raw = _read_body(environ, 16384)
                     def identity_fields(pairs):
                         result={}
                         for key,value in pairs:
@@ -419,10 +413,7 @@ class AdminApi:
                 if not self._password_limiter.allow(user_id):return respond('429 Too Many Requests',{'error':'retry later'})
                 try:
                     if environ.get('CONTENT_TYPE')!='application/json' or environ.get('QUERY_STRING',''):raise ValueError()
-                    length=int(environ.get('CONTENT_LENGTH',''))
-                    if not 1<=length<=16384:raise ValueError()
-                    raw=environ['wsgi.input'].read(length)
-                    if len(raw)!=length:raise ValueError()
+                    raw = _read_body(environ, 16384)
                     def exact_fields(pairs):
                         result={}
                         for key,value in pairs:
@@ -495,12 +486,7 @@ class AdminApi:
                 if environ.get("CONTENT_TYPE") != "application/json":
                     return respond("415 Unsupported Media Type", {"error": "JSON required"})
                 try:
-                    length = int(environ.get("CONTENT_LENGTH", ""))
-                    if not 1 <= length <= 65536:
-                        raise ValueError("invalid body size")
-                    raw = environ["wsgi.input"].read(length)
-                    if len(raw) != length:
-                        raise ValueError("incomplete body")
+                    raw = _read_body(environ, 65536)
                     def unique(pairs):
                         result = {}
                         for key,value in pairs:

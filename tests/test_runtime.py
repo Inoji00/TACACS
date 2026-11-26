@@ -25,7 +25,7 @@ class RuntimeTests(unittest.TestCase):
              patch("tacacs_appliance.runtime.TacacsListener"):
             pool = MagicMock()
             build_listener(config, pool)
-        provider.assert_called_once_with(pool, config.tenant_id, lockout_after=4)
+        provider.assert_called_once_with(pool, config.tenant_id, lockout_after=4, require_device_group=True)
 
     def load(self, raw=CONFIG):
         with patch.object(Path, "open", return_value=io.BytesIO(raw)):

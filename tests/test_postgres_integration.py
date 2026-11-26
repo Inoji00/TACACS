@@ -130,6 +130,25 @@ class PostgresIntegrationTests(unittest.TestCase):
                     function='has_any_column_privilege' if privilege in ('INSERT','UPDATE') else 'has_table_privilege'
                     self.assertFalse(db.execute("SELECT "+function+"(current_user,'accounting_records',%s)",(privilege,)).fetchone()[0])
 
+    def test_device_authentication_leaves_web_only_identity_unchanged(self):
+        tenant, user = self.provision()
+        with self.pool.connection() as db:
+            username, failures, locked = db.execute(
+                "SELECT username,failed_logins,locked FROM users WHERE tenant_id=%s AND id=%s",
+                (tenant, user),
+            ).fetchone()
+        with self.restricted_pool("aaa") as pool:
+            provider = PostgresLocalProvider(
+                pool, str(tenant), lockout_after=4, require_device_group=True
+            )
+            self.assertFalse(provider.authenticate(username, "Invalid-test-42!").authenticated)
+        with self.pool.connection() as db:
+            self.assertEqual(
+                db.execute("SELECT failed_logins,locked FROM users WHERE tenant_id=%s AND id=%s",
+                           (tenant, user)).fetchone(),
+                (failures, locked),
+            )
+
     def test_unknown_authentication_username_reaches_logs_without_password(self):
         import contextlib,io
         from tacacs_appliance.aaa_events import AaaEvents,ObservedRouter
@@ -998,6 +1017,19 @@ class PostgresIntegrationTests(unittest.TestCase):
         with self.pool.connection() as connection:
             connection.execute("INSERT INTO policy_versions(id,tenant_id,revision,state,author_id,rules) VALUES (%s,%s,1,'active',%s,%s)",
                 (uuid4(),tenant,user,Jsonb([dict(rule_id='show',groups=[],device_ids=[],command_prefix='show',decision='allow')])))
+            group, operator = uuid4(), uuid4()
+            connection.execute(
+                "INSERT INTO identity_groups(id,tenant_id,name) VALUES (%s,%s,%s)",
+                (group, tenant, "network-operators"),
+            )
+            connection.execute(
+                "INSERT INTO users(id,tenant_id,username,password_hash) VALUES (%s,%s,%s,%s)",
+                (operator, tenant, "operator", PasswordHasher().hash("integration-password")),
+            )
+            connection.execute(
+                "INSERT INTO user_groups(tenant_id,user_id,group_id) VALUES (%s,%s,%s)",
+                (tenant, operator, group),
+            )
         secret=secrets.token_bytes(32)
         with self.restricted_pool('aaa') as pool,tempfile.TemporaryDirectory() as directory:
             secret_file=Path(directory)/'device.secret';secret_file.write_bytes(secret);secret_file.chmod(0o600)
@@ -1021,16 +1053,16 @@ class PostgresIntegrationTests(unittest.TestCase):
             try:
                 self.assertEqual(listener.address[1],49)
                 with socket.create_connection(listener.address,timeout=3) as client:
-                    self.assertEqual(exchange(client,1,1,101,bytes((1,15,1,1,5,0,0,0))+b'admin')[0],5)
+                    self.assertEqual(exchange(client,1,1,101,bytes((1,15,1,1,8,0,0,0))+b'operator')[0],5)
                     password=b'integration-password'
                     self.assertEqual(exchange(client,1,3,101,struct.pack('!HHB',len(password),0,0)+password)[0],1)
                 for command,status in ((b'show',1),(b'reload',16)):
                     arguments=(b'service=shell',b'cmd='+command,b'cmd-arg=version')
-                    body=bytes((6,15,1,1,5,0,0,len(arguments)))+bytes(map(len,arguments))+b'admin'+b''.join(arguments)
+                    body=bytes((6,15,1,1,8,0,0,len(arguments)))+bytes(map(len,arguments))+b'operator'+b''.join(arguments)
                     with socket.create_connection(listener.address,timeout=3) as client:
                         self.assertEqual(exchange(client,2,1,102,body)[0],status)
                 argument=b'password=not-to-store'
-                body=bytes((2,6,15,1,1,5,0,0,1,len(argument)))+b'admin'+argument
+                body=bytes((2,6,15,1,1,8,0,0,1,len(argument)))+b'operator'+argument
                 with socket.create_connection(listener.address,timeout=3) as client:
                     self.assertEqual(exchange(client,3,1,103,body)[4],1)
                 with self.pool.connection() as connection:

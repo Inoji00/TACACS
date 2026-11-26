@@ -6,12 +6,23 @@ import subprocess
 
 
 PROTECTED_DIRS = {"data", "secrets", "admin-secrets", "provisioning", "artifacts"}
+BROWSER_DATABASES = {
+    "cookies", "history", "login data", "login data for account", "web data",
+}
+SQLITE_SIDECARS = ("-wal", "-shm", "-journal")
 PROTECTED_SUFFIXES = {".dump", ".pem", ".key", ".p12", ".pfx", ".log", ".sqlite", ".sqlite3"}
 SECRET_MARKERS = re.compile(
     rb"-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----"
     rb"|hooks\.slack(?:-gov)?\.com/services/T[A-Z0-9]{8,}/B[A-Z0-9]{8,}/[A-Za-z0-9]{20,}"
     rb"|\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{50,})\b"
 )
+
+
+def browser_profile_file(name):
+    normalized = name.lower()
+    for suffix in SQLITE_SIDECARS:
+        normalized = normalized.removesuffix(suffix)
+    return normalized in BROWSER_DATABASES
 
 
 def main():
@@ -26,6 +37,9 @@ def main():
         if (path.relative_to(root).parts[0] in PROTECTED_DIRS or path.name == ".env"
                 or path.name.startswith(".env.") or path.suffix.lower() in PROTECTED_SUFFIXES):
             errors.append((entry, "runtime data or credential file"))
+            continue
+        if browser_profile_file(path.name):
+            errors.append((entry, "browser profile database"))
             continue
         content = path.read_bytes()
         if SECRET_MARKERS.search(content):

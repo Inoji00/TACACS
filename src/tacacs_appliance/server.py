@@ -108,7 +108,14 @@ class TacacsListener:
                     break
                 raise
             remote_ip = str(remote[0])
-            if not self._source_limiter.allow(remote_ip) or not self._source_allowed(remote_ip) or not self._slots.acquire(blocking=False):
+            # Static ACLs are cheap. Dynamic ACLs may query PostgreSQL and
+            # must run in a bounded worker before touching the rate limiter.
+            if self._source_state is None and (
+                not self._source_allowed(remote_ip) or not self._source_limiter.allow(remote_ip)
+            ):
+                client.close()
+                continue
+            if not self._slots.acquire(blocking=False):
                 client.close()
                 continue
             with self._clients_lock:
@@ -153,6 +160,12 @@ class TacacsListener:
 
     def _handle_client(self, client: socket.socket, remote_ip: str) -> None:
         try:
+            if self._stop.is_set():
+                return
+            if self._source_state is not None and (
+                not self._source_allowed(remote_ip) or not self._source_limiter.allow(remote_ip)
+            ):
+                return
             # Stateful AAA handlers are created per connection. This prevents a
             # session ID reused on another TCP connection stealing a challenge.
             handler = self._handler_factory() if self._handler_factory else self._handler

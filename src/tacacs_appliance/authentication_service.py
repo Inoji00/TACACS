@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from .authentication import AuthenticationContinue, AuthenticationReply, AuthenticationStart
 from .local_identity import AuthenticationResult
+from .password_timing import PasswordWorkUnavailable
 from typing import Protocol
 
 class AuthenticationProvider(Protocol):
@@ -54,7 +55,10 @@ class AuthenticationService:
         if request.flags != 0:
             # ABORT (bit 0) ends the exchange; unknown flags fail closed too.
             return AuthenticationReply(status=STATUS_FAIL, server_message="authentication failed")
-        result = self._local_provider.authenticate(pending.username, request.user_message)
+        try:
+            result = self._local_provider.authenticate(pending.username, request.user_message)
+        except PasswordWorkUnavailable:
+            return AuthenticationReply(status=STATUS_ERROR, server_message="authentication service unavailable")
         if result.authenticated:
             return AuthenticationReply(status=STATUS_PASS)
         return AuthenticationReply(status=STATUS_FAIL, server_message="authentication failed")

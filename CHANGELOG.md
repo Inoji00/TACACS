@@ -2,6 +2,15 @@
 
 **English** · [Tiếng Việt](CHANGELOG.vi.md)
 
+## v1.1.7 — 2026-11-26
+
+- Move PostgreSQL-backed device admission into bounded listener workers and deny unauthorized sources before allocating rate-limit buckets.
+- Require device-group membership for TACACS+ password authentication. Web-only users are excluded from device lockout updates. Dual-use users still share their counters.
+- Wait up to 1.5 seconds for a password-work slot. Saturation returns TACACS+ ERROR or HTTP 503 without updating credential counters.
+- Simplify Admin API body handling, name TACACS+ challenge fields and lint maintained modules with Ruff.
+- Reject browser profile databases in the release privacy check and create versioned ZIPs from tracked Git content.
+- VM lab evidence for the runtime patch: 531 Python and PostgreSQL integration tests passed, including TCP/49 with the restricted database role. Switch fallback remains site-dependent.
+
 ## v1.1.6 — 2026-11-26
 
 - Reuse the Docker dependency layer when rebuilding after source or console changes.

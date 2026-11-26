@@ -2,6 +2,15 @@
 
 [English](CHANGELOG.md) · **Tiếng Việt**
 
+## v1.1.7 — 26/11/2026
+
+- Chuyển tra cứu thiết bị PostgreSQL vào worker có giới hạn. Nguồn bị ACL từ chối không chiếm bucket.
+- Yêu cầu tài khoản TACACS+ có nhóm thiết bị. Tài khoản chỉ dùng Web không bị tăng bộ đếm khóa từ thiết bị. Tài khoản dùng cả hai luồng vẫn chia sẻ bộ đếm.
+- Chờ slot xử lý mật khẩu tối đa 1,5 giây. Quá tải trả TACACS+ ERROR hoặc HTTP 503 và không cập nhật bộ đếm xác thực.
+- Dùng chung helper đọc body Admin API, đặt tên trường challenge và thêm Ruff cho các module đã chuẩn hóa.
+- Chặn cơ sở dữ liệu profile trình duyệt khi kiểm tra phát hành. Gói ZIP được tạo từ tệp Git theo dõi.
+- Bằng chứng cho bản vá runtime trên VM lab: 531 bài Python và PostgreSQL đã đạt, gồm TCP/49 với quyền DB giới hạn. Fallback trên switch tùy thuộc cấu hình.
+
 ## v1.1.6 — 26/11/2026
 
 - Tái sử dụng lớp thư viện Docker khi build lại sau khi sửa mã nguồn hoặc giao diện.

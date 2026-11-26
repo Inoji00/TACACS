@@ -122,6 +122,45 @@ class ListenerTests(unittest.TestCase):
             listener.shutdown()
             thread.join(timeout=1)
 
+        self.assertEqual(listener._source_limiter._buckets, {})
+
+    def test_slow_dynamic_acl_does_not_block_a_second_connection(self):
+        first_started = threading.Event()
+        release_first = threading.Event()
+        second_dispatched = threading.Event()
+        lock = threading.Lock()
+        calls = 0
+
+        def source_state(_):
+            nonlocal calls
+            with lock:
+                calls += 1
+                is_first = calls == 1
+            if is_first:
+                first_started.set()
+                release_first.wait(timeout=5)
+                return False
+            return True
+
+        listener = TacacsListener(
+            ListenerConfig(host="127.0.0.1", port=0, worker_limit=2),
+            lambda *_: second_dispatched.set(),
+            source_state=source_state,
+        )
+        listener.start()
+        thread = threading.Thread(target=listener.serve_forever, daemon=True)
+        thread.start()
+        try:
+            with socket.create_connection(listener.address, timeout=1):
+                self.assertTrue(first_started.wait(1))
+                with socket.create_connection(listener.address, timeout=1) as second:
+                    second.sendall(frame())
+                    self.assertTrue(second_dispatched.wait(1))
+        finally:
+            release_first.set()
+            listener.shutdown()
+            thread.join(timeout=1)
+
     def test_handler_can_return_protocol_response(self):
         self.listener.shutdown(); self.thread.join(timeout=1)
         self.listener = TacacsListener(

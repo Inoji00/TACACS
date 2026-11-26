@@ -30,7 +30,7 @@ sudo bash install.sh
 Với ZIP và checksum được cung cấp cùng nhau, có thể dùng:
 
 ```bash
-sha256sum -c TNAC-v1.1.5.zip.sha256 && unzip TNAC-v1.1.5.zip
+sha256sum -c TNAC-v1.1.7.zip.sha256 && unzip TNAC-v1.1.7.zip
 cd 'TNAC+'
 sudo bash install.sh
 ```

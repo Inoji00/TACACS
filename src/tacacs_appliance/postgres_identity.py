@@ -7,10 +7,11 @@ from .password_timing import DummyPasswordVerifier, bounded_password_work, accep
 
 
 class PostgresLocalProvider:
-    def __init__(self, pool, tenant_id: str, lockout_after: int = 5):
+    def __init__(self, pool, tenant_id: str, lockout_after: int = 5, *, require_device_group: bool = False):
         if lockout_after < 1: raise ValueError("invalid lockout threshold")
         self._pool, self._tenant = pool, UUID(tenant_id)
         self._threshold = lockout_after
+        self._require_device_group = require_device_group
         self._hasher = PasswordHasher()
         self._dummy = DummyPasswordVerifier()
 
@@ -19,9 +20,18 @@ class PostgresLocalProvider:
         """Row lock makes counters consistent across processes and HA nodes."""
         with self._pool.connection() as connection:
             with connection.transaction():
+                query = (
+                    "SELECT id,password_hash,enabled,locked,failed_logins FROM users u "
+                    "WHERE u.tenant_id=%s AND u.username=%s"
+                )
+                if self._require_device_group:
+                    # Web-only identities have no device identity-group membership.
+                    query += (
+                        " AND EXISTS (SELECT 1 FROM user_groups g "
+                        "WHERE g.tenant_id=u.tenant_id AND g.user_id=u.id)"
+                    )
                 row = connection.execute(
-                    "SELECT id,password_hash,enabled,locked,failed_logins FROM users "
-                    "WHERE tenant_id=%s AND username=%s FOR UPDATE", (self._tenant, username)
+                    query + " FOR UPDATE", (self._tenant, username)
                 ).fetchone()
                 if row is None or not row[2] or row[3]:
                     self._dummy.verify(password)
