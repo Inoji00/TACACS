@@ -2,6 +2,12 @@
 
 [English](CHANGELOG.md) · **Tiếng Việt**
 
+## v1.1.8 — 26/11/2026
+
+- Tính hạn mức đăng nhập Web theo IP nguồn do HTTPS relay đã xác thực cung cấp. Kết nối trực tiếp dùng IP của socket.
+- Bỏ qua truy vấn PostgreSQL khi nguồn TCP/49 đã có bucket và hết token. Nguồn mới vẫn cần qua ACL trước khi được cấp bucket.
+- Đổi tên gói source trong CI thành TNAC-source-<tag>.zip để phân biệt với gói cài đặt và checksum tương ứng.
+
 ## v1.1.7 — 26/11/2026
 
 - Chuyển tra cứu thiết bị PostgreSQL vào worker có giới hạn. Nguồn bị ACL từ chối không chiếm bucket.

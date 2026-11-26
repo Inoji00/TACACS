@@ -86,6 +86,31 @@ class AdminApiTests(unittest.TestCase):
         result["body"] = json.loads(b"".join(self.app(environ, start)))
         return result
 
+    def test_login_rate_limit_uses_verified_relay_source(self):
+        login = Mock()
+        login.login.return_value = None
+        self.app = AdminApi(self.sessions, self.permissions, b"k" * 32,
+                            "https://admin.local", login=login)
+        payload = b'{"username":"example","password":"test-only","factor_id":"","code":""}'
+
+        def request(source, *, relayed=True):
+            return self.request(
+                PATH_INFO="/api/login", REQUEST_METHOD="POST", REMOTE_ADDR="127.0.0.1",
+                HTTP_ORIGIN="https://admin.local", CONTENT_TYPE="application/json",
+                CONTENT_LENGTH=str(len(payload)), HTTP_X_FORWARDED_FOR=source,
+                **{"wsgi.input": io.BytesIO(payload), "tnac.via_proxy": relayed,
+                   "tnac.source_ip": source},
+            )["status"]
+
+        for _ in range(5):
+            self.assertEqual(request("192.0.2.10"), "401 Unauthorized")
+        self.assertEqual(request("192.0.2.10"), "429 Too Many Requests")
+        self.assertEqual(request("192.0.2.11"), "401 Unauthorized")
+        for _ in range(5):
+            self.assertEqual(request("192.0.2.20", relayed=False), "401 Unauthorized")
+        self.assertEqual(request("192.0.2.21", relayed=False), "429 Too Many Requests")
+        self.assertEqual(request("invalid"), "429 Too Many Requests")
+
     def test_login_password_work_timeout_returns_503_without_failed_login_audit(self):
         from tacacs_appliance.password_timing import PasswordWorkUnavailable
 

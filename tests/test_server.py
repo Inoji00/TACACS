@@ -124,6 +124,23 @@ class ListenerTests(unittest.TestCase):
 
         self.assertEqual(listener._source_limiter._buckets, {})
 
+    def test_exhausted_dynamic_source_skips_registry_lookup(self):
+        from unittest.mock import Mock
+
+        registry = Mock(return_value=True)
+        listener = TacacsListener(
+            ListenerConfig(source_rate_capacity=1), lambda *_: None, source_state=registry
+        )
+        try:
+            self.assertTrue(listener._source_limiter.allow("192.0.2.10"))
+            self.assertTrue(listener._slots.acquire(blocking=False))
+            client = Mock()
+            listener._handle_client(client, "192.0.2.10")
+            registry.assert_not_called()
+            client.close.assert_called_once()
+        finally:
+            listener.shutdown()
+
     def test_slow_dynamic_acl_does_not_block_a_second_connection(self):
         first_started = threading.Event()
         release_first = threading.Event()

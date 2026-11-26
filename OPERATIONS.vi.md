@@ -78,7 +78,7 @@ Trong **Users**, chọn **Unlock** cho tài khoản đang bị khóa và xác nh
 
 ## Tương thích cơ sở dữ liệu
 
-v1.1.7 giữ 37 migration của bản v1.0 đã phát hành. Xem UPGRADE.vi.md để nâng cấp bản đang chạy. Sao lưu PostgreSQL và giữ image dịch vụ cũ trước khi nâng cấp.
+v1.1.8 giữ 37 migration của bản v1.0 đã phát hành. Xem UPGRADE.vi.md để nâng cấp bản đang chạy. Sao lưu PostgreSQL và giữ image dịch vụ cũ trước khi nâng cấp.
 
 
 ## Khóa tài khoản đăng nhập thiết bị

@@ -78,7 +78,7 @@ In **Users**, select **Unlock** for the locked account and confirm the action. T
 
 ## Schema compatibility
 
-v1.1.7 uses the same 37 migrations as the published v1.0 release. See UPGRADE.md for the existing-deployment procedure. Back up PostgreSQL and keep the previous service images before upgrading.
+v1.1.8 uses the same 37 migrations as the published v1.0 release. See UPGRADE.md for the existing-deployment procedure. Back up PostgreSQL and keep the previous service images before upgrading.
 
 
 ## Device login lockout

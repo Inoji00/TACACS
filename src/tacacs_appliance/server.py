@@ -163,7 +163,9 @@ class TacacsListener:
             if self._stop.is_set():
                 return
             if self._source_state is not None and (
-                not self._source_allowed(remote_ip) or not self._source_limiter.allow(remote_ip)
+                self._source_limiter.is_exhausted(remote_ip)
+                or not self._source_allowed(remote_ip)
+                or not self._source_limiter.allow(remote_ip)
             ):
                 return
             # Stateful AAA handlers are created per connection. This prevents a

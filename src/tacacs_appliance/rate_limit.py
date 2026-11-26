@@ -32,6 +32,16 @@ class SourceRateLimiter:
         self._max_sources = max_sources
         self._idle = idle_seconds
 
+    def is_exhausted(self, source: str, now: float | None = None) -> bool:
+        """Check an existing bucket without creating or consuming tokens."""
+        current = time.monotonic() if now is None else now
+        with self._lock:
+            bucket = self._buckets.get(source)
+            return (
+                bucket is not None
+                and bucket.tokens + (current - bucket.updated) * self.refill < 1
+            )
+
     def allow(self, source: str, now: float | None = None) -> bool:
         current = time.monotonic() if now is None else now
         with self._lock:

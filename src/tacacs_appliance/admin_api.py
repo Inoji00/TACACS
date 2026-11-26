@@ -125,8 +125,10 @@ class AdminApi:
         if path == "/api/login" and method == "POST" and self._login is not None:
             if environ.get("HTTP_ORIGIN") != self._origin:
                 return respond("403 Forbidden", {"error": "request verification failed"})
-            # Use only the socket peer supplied by the server, not X-Forwarded-For.
+            # Use trusted socket or relay metadata, never X-Forwarded-For.
             peer = environ.get("REMOTE_ADDR")
+            if environ.get("tnac.via_proxy") is True:
+                peer = audit_ip(environ.get("tnac.source_ip")) or peer
             if not isinstance(peer, str) or not peer or not self._login_limiter.allow(peer):
                 return respond("429 Too Many Requests", {"error": "retry later"})
             if environ.get("CONTENT_TYPE") != "application/json":

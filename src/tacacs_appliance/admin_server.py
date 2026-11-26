@@ -96,7 +96,7 @@ class AdminRequestHandler(WSGIRequestHandler):
         environment["tnac.source_ip"]=self.client_address[0]
         environment["tnac.via_proxy"]=self.server.relayed
         if environment["tnac.via_proxy"]:
-            # Preserve the existing rate-limit key for relayed requests.
+            # Keep the WSGI transport peer separate from verified relay metadata.
             environment["REMOTE_ADDR"]="127.0.0.1"
         else:
             environment["tnac.destination_ip"]=self.request.getsockname()[0]

@@ -2,6 +2,12 @@
 
 **English** · [Tiếng Việt](CHANGELOG.vi.md)
 
+## v1.1.8 — 2026-11-26
+
+- Apply Web login rate limits to each verified HTTPS relay source IP. Direct connections use the socket peer.
+- Skip PostgreSQL device admission lookups when an existing TCP/49 source has exhausted its rate limit. Unknown sources still require ACL approval before obtaining a bucket.
+- Name the CI source archive TNAC-source-<tag>.zip to distinguish it from the installer and its checksum.
+
 ## v1.1.7 — 2026-11-26
 
 - Move PostgreSQL-backed device admission into bounded listener workers and deny unauthorized sources before allocating rate-limit buckets.
