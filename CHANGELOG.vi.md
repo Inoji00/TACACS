@@ -2,6 +2,12 @@
 
 [English](CHANGELOG.md) · **Tiếng Việt**
 
+## v1.1.6 — 26/11/2026
+
+- Tái sử dụng lớp thư viện Docker khi build lại sau khi sửa mã nguồn hoặc giao diện.
+- Chỉ chạy thu hồi trang SQLite khi cơ sở dữ liệu Device Syslog có trang trống.
+- Giữ giao diện đã phát hành, cấu trúc dịch vụ và toàn bộ migration.
+
 ## v1.1.5 — 20/11/2026
 
 - Thêm Mattermost làm lựa chọn nhận cảnh báo bên cạnh Slack. Máy Linux chỉ gửi webhook Mattermost đến tên DNS do quản trị viên phê duyệt.

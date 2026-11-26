@@ -1,12 +1,12 @@
 ARG PYTHON_IMAGE=python:3.12-alpine3.23
 FROM ${PYTHON_IMAGE} AS build
 WORKDIR /build
+RUN pip install --no-cache-dir --prefix=/install --only-binary=:all: \
+        'argon2-cffi>=23.1,<26' 'psycopg[binary,pool]>=3.2,<4' 'cryptography>=46,<51'
 COPY pyproject.toml README.md ./
 COPY src ./src
 COPY migrations ./migrations
-RUN pip install --no-cache-dir --prefix=/install --only-binary=:all: \
-        'argon2-cffi>=23.1,<26' 'psycopg[binary,pool]>=3.2,<4' 'cryptography>=46,<51' \
-    && pip install --no-cache-dir --prefix=/install --no-deps . \
+RUN pip install --no-cache-dir --prefix=/install --no-deps . \
     && chmod -R a+rX /install /build/migrations
 
 FROM ${PYTHON_IMAGE}

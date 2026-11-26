@@ -2,6 +2,12 @@
 
 **English** · [Tiếng Việt](CHANGELOG.vi.md)
 
+## v1.1.6 — 2026-11-26
+
+- Reuse the Docker dependency layer when rebuilding after source or console changes.
+- Skip incremental SQLite vacuum when the Device Syslog database has no free pages.
+- Preserve the published console, service layout and all database migrations.
+
 ## v1.1.5 — 2026-11-20
 
 - Add Mattermost as an alternative webhook destination to Slack. The Linux worker sends Mattermost alerts only to an administrator-approved DNS hostname.

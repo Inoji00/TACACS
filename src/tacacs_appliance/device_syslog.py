@@ -51,7 +51,8 @@ def prune(db, now):
             "(SELECT id FROM events WHERE received < ? ORDER BY received, id LIMIT 500)",
             (now - RETENTION_SECONDS,),
         ).rowcount
-        db.execute("PRAGMA incremental_vacuum(64)")
+        if db.execute("PRAGMA freelist_count").fetchone()[0]:
+            db.execute("PRAGMA incremental_vacuum(64)")
     return deleted
 
 
