@@ -2,6 +2,12 @@
 
 [English](CHANGELOG.md) · **Tiếng Việt**
 
+## v1.2.1 — 26/11/2026
+
+- Tách điều phối Admin API thành các handler riêng cho đăng nhập, thiết bị, tài khoản, policy, log, Syslog và cảnh báo.
+- Dùng chung kiểm tra trùng khóa JSON cho sáu nhánh xử lý. Giữ giới hạn body, session, CSRF và phân quyền hiện hành.
+- Kiểm thử local: 33 bài Admin API đạt, gồm từ chối khóa JSON trùng và body thiếu. Ruff và test frontend cũng đạt.
+
 ## v1.1.9 — 26/11/2026
 
 - Đưa source React gốc và lockfile vào repository. GitHub Actions kiểm tra kiểu dữ liệu, chạy test và build riêng. Bộ cài tiếp tục dùng console hiện hành.

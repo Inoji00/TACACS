@@ -30,7 +30,7 @@ sudo bash install.sh
 If you have the installer ZIP and its checksum, use:
 
 ```bash
-sha256sum -c TNAC-v1.1.9.zip.sha256 && unzip TNAC-v1.1.9.zip
+sha256sum -c TNAC-v1.2.1.zip.sha256 && unzip TNAC-v1.2.1.zip
 cd 'TNAC+'
 sudo bash install.sh
 ```

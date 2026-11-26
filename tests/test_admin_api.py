@@ -86,6 +86,22 @@ class AdminApiTests(unittest.TestCase):
         result["body"] = json.loads(b"".join(self.app(environ, start)))
         return result
 
+    def test_login_rejects_duplicate_json_keys_and_incomplete_body(self):
+        login = Mock()
+        self.app = AdminApi(self.sessions, self.permissions, b"k" * 32,
+                            "https://admin.local", login=login)
+        valid = b'{"username":"example","password":"test-only","factor_id":"","code":""}'
+        duplicate = valid[:-1] + b',"username":"second"}'
+        for payload, length in ((duplicate, len(duplicate)), (valid, len(valid) + 1)):
+            with self.subTest(length=length):
+                response = self.request(
+                    PATH_INFO="/api/login", REQUEST_METHOD="POST", REMOTE_ADDR="192.0.2.10",
+                    HTTP_ORIGIN="https://admin.local", CONTENT_TYPE="application/json",
+                    CONTENT_LENGTH=str(length), **{"wsgi.input": io.BytesIO(payload)},
+                )
+                self.assertEqual(response["status"], "400 Bad Request")
+        login.login.assert_not_called()
+
     def test_login_rate_limit_uses_verified_relay_source(self):
         login = Mock()
         login.login.return_value = None

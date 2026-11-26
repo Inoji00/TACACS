@@ -2,6 +2,12 @@
 
 **English** · [Tiếng Việt](CHANGELOG.vi.md)
 
+## v1.2.1 — 2026-11-26
+
+- Split Admin API request dispatch into dedicated handlers for login, devices, identities, policies, logs, Syslog and alerts.
+- Centralize duplicate-key rejection for six JSON request handlers while retaining their body limits and the existing session, CSRF and authorization checks.
+- Local verification: 33 Admin API tests passed, including duplicate keys and incomplete bodies. Ruff and frontend source tests passed.
+
 ## v1.1.9 — 2026-11-26
 
 - Add the original React source and dependency lockfile. GitHub Actions type-checks, tests and builds it separately while the installer continues to use the currently shipped console.

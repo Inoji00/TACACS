@@ -49,6 +49,19 @@ def _read_body(environ, limit):
     return raw
 
 
+def _unique_json_fields(pairs):
+    fields = {}
+    for key, value in pairs:
+        if key in fields:
+            raise ValueError("duplicate field")
+        fields[key] = value
+    return fields
+
+
+def _read_json(environ, limit):
+    return json.loads(_read_body(environ, limit), object_pairs_hook=_unique_json_fields)
+
+
 class AdminApi:
     def __init__(
         self,
@@ -204,67 +217,7 @@ class AdminApi:
         if path == "/api/login-options" and method == "GET":
             return respond("200 OK", {"mfa_required": not self.password_only})
         if path == "/api/login" and method == "POST" and self._login is not None:
-            if environ.get("HTTP_ORIGIN") != self._origin:
-                return respond(
-                    "403 Forbidden", {"error": "request verification failed"}
-                )
-            # Use trusted socket or relay metadata, never X-Forwarded-For.
-            peer = environ.get("REMOTE_ADDR")
-            if environ.get("tnac.via_proxy") is True:
-                peer = audit_ip(environ.get("tnac.source_ip")) or peer
-            if (
-                not isinstance(peer, str)
-                or not peer
-                or not self._login_limiter.allow(peer)
-            ):
-                return respond("429 Too Many Requests", {"error": "retry later"})
-            if environ.get("CONTENT_TYPE") != "application/json":
-                return respond("415 Unsupported Media Type", {"error": "JSON required"})
-            try:
-                raw = _read_body(environ, 8192)
-
-                def unique_fields(pairs):
-                    result = {}
-                    for key, value in pairs:
-                        if key in result:
-                            raise ValueError("duplicate field")
-                        result[key] = value
-                    return result
-
-                body = json.loads(raw, object_pairs_hook=unique_fields)
-                fields = (
-                    {"username", "password"}
-                    if self.password_only
-                    else {"username", "password", "factor_id", "code"}
-                )
-                if not isinstance(body, dict) or set(body) != fields:
-                    raise ValueError("invalid login schema")
-            except (ValueError, KeyError, UnicodeError):
-                return respond("400 Bad Request", {"error": "invalid request"})
-            try:
-                new_token = self._login.login(**body)
-                if new_token is None:
-                    self._record_web_access(
-                        environ, "web.login", "fail", username=body["username"]
-                    )
-                    return respond("401 Unauthorized", {"error": "invalid credentials"})
-                response = {
-                    "status": "authenticated",
-                    "csrf_token": self.csrf_token(new_token),
-                }
-                cookie = self.session_cookie(new_token)
-                self._record_web_access(
-                    environ,
-                    "web.login",
-                    "success",
-                    username=body["username"],
-                    token=new_token,
-                )
-                return respond("200 OK", response, [("Set-Cookie", cookie)])
-            except Exception:
-                return respond(
-                    "503 Service Unavailable", {"error": "service unavailable"}
-                )
+            return self._handle_login(environ, respond)
         cookie_raw = environ.get("HTTP_COOKIE", "")
         if len(cookie_raw) > 4096:
             return respond("401 Unauthorized", {"error": "authentication required"})
@@ -331,110 +284,11 @@ class AdminApi:
                         )
                 return respond("200 OK", session)
             if path == "/api/device-syslog/profiles":
-                if not self._permissions(user_id, "users.manage"):
-                    return respond("403 Forbidden", {"error": "permission denied"})
-                if environ.get("QUERY_STRING"):
-                    return respond("400 Bad Request", {"error": "unexpected query"})
-                from .syslog_profiles import (
-                    change_profile,
-                    read_profiles,
-                    validate_change,
-                )
-
-                if method == "GET":
-                    return respond("200 OK", {"profiles": read_profiles()})
-                if method != "POST":
-                    return respond(
-                        "405 Method Not Allowed", {"error": "method not allowed"}
-                    )
-                try:
-                    if environ.get("CONTENT_TYPE") != "application/json":
-                        raise ValueError("invalid body")
-                    raw = _read_body(environ, 1024)
-                    change = validate_change(json.loads(raw))
-                    if self._web_audit is None:
-                        raise RuntimeError("profile audit unavailable")
-                    self._web_audit(
-                        actor=user_id,
-                        source="admin-syslog",
-                        action="syslog.profile." + change[0],
-                        target=change[1],
-                        result="requested",
-                        security_context={},
-                    )
-                    change_profile(change)
-                except ValueError:
-                    return respond(
-                        "400 Bad Request", {"error": "invalid syslog profile"}
-                    )
-                return respond("200 OK", {"profiles": read_profiles()})
+                return self._handle_syslog_profiles(environ, method, user_id, respond)
             if path == "/api/device-syslog":
-                if not self._permissions(user_id, "users.manage"):
-                    return respond("403 Forbidden", {"error": "permission denied"})
-                if method != "GET":
-                    return respond(
-                        "405 Method Not Allowed", {"error": "method not allowed"}
-                    )
-                from .device_syslog import search
-
-                query = environ.get("QUERY_STRING", "")
-                if len(query) > 2048:
-                    return respond(
-                        "400 Bad Request", {"error": "invalid syslog filters"}
-                    )
-                try:
-                    return respond("200 OK", search(query))
-                except (ValueError, OverflowError):
-                    return respond(
-                        "400 Bad Request", {"error": "invalid syslog filters"}
-                    )
+                return self._handle_syslog_search(environ, method, user_id, respond)
             if path in ("/api/alerts", "/api/alerts/test") and self._alerts is not None:
-                if not self._permissions(user_id, "users.manage"):
-                    return respond("403 Forbidden", {"error": "permission denied"})
-                if environ.get("QUERY_STRING", ""):
-                    return respond("400 Bad Request", {"error": "unexpected query"})
-                if path == "/api/alerts" and method == "GET":
-                    return respond("200 OK", self._alerts.public())
-                if method != "POST":
-                    return respond(
-                        "405 Method Not Allowed", {"error": "method not allowed"}
-                    )
-                try:
-                    if environ.get("CONTENT_TYPE") != "application/json":
-                        raise ValueError("invalid body")
-                    raw = _read_body(environ, 4096)
-
-                    def alert_fields(pairs):
-                        fields = {}
-                        for key, value in pairs:
-                            if key in fields:
-                                raise ValueError("duplicate alert field")
-                            fields[key] = value
-                        return fields
-
-                    values = json.loads(raw, object_pairs_hook=alert_fields)
-                    if path == "/api/alerts/test" and values != {}:
-                        raise ValueError("invalid test request")
-                    if self._web_audit is None:
-                        raise RuntimeError("alert audit unavailable")
-                    self._web_audit(
-                        actor=user_id,
-                        source="admin-alerts",
-                        action="slack.alerts.test"
-                        if path.endswith("/test")
-                        else "slack.alerts.configure",
-                        target="slack",
-                        result="requested",
-                        security_context={},
-                    )
-                    if path.endswith("/test"):
-                        return respond("202 Accepted", self._alerts.request_test())
-                    return respond("200 OK", self._alerts.save(values))
-                except (ValueError, TypeError, KeyError, UnicodeError):
-                    return respond(
-                        "400 Bad Request",
-                        {"error": "invalid alert settings or test cooldown"},
-                    )
+                return self._handle_alerts(environ, method, path, user_id, respond)
             if (
                 path == "/api/inventory"
                 and method == "GET"
@@ -452,59 +306,7 @@ class AdminApi:
                 and method == "GET"
                 and self._logs is not None
             ):
-                if not (
-                    self._permissions(user_id, "audit.read")
-                    or (
-                        path == "/api/logs"
-                        and self._permissions(user_id, "devices.aaa.read")
-                    )
-                ):
-                    return respond("403 Forbidden", {"error": "permission denied"})
-                from urllib.parse import parse_qs
-
-                try:
-                    query = environ.get("QUERY_STRING", "")
-                    if len(query) > 4096:
-                        raise ValueError()
-                    fields = parse_qs(
-                        query,
-                        keep_blank_values=True,
-                        strict_parsing=True,
-                        max_num_fields=12,
-                    )
-                    if set(fields) - {
-                        "kind",
-                        "search",
-                        "action",
-                        "result",
-                        "device",
-                        "session",
-                        "actor",
-                        "since",
-                        "until",
-                        "before",
-                        "limit",
-                    } or any(len(v) != 1 for v in fields.values()):
-                        raise ValueError()
-                    values = {key: items[0] for key, items in fields.items()}
-                    if "limit" in values:
-                        if (
-                            not values["limit"].isascii()
-                            or not values["limit"].isdecimal()
-                            or len(values["limit"]) > 3
-                        ):
-                            raise ValueError()
-                        values["limit"] = int(values["limit"])
-                    return respond(
-                        "200 OK",
-                        self._logs.read(
-                            user_id, report=path == "/api/reports", **values
-                        ),
-                    )
-                except PermissionError:
-                    return respond("403 Forbidden", {"error": "permission denied"})
-                except (ValueError, TypeError, KeyError, OverflowError):
-                    return respond("400 Bad Request", {"error": "invalid log query"})
+                return self._handle_logs(environ, path, user_id, respond)
             if (
                 path == "/api/dashboard"
                 and method == "GET"
@@ -533,245 +335,20 @@ class AdminApi:
                 and method == "GET"
                 and self._accounting is not None
             ):
-                if not (
-                    self._permissions(user_id, "audit.read")
-                    or self._permissions(user_id, "devices.aaa.read")
-                ):
-                    return respond("403 Forbidden", {"error": "permission denied"})
-                from urllib.parse import parse_qs
-
-                try:
-                    query = environ.get("QUERY_STRING", "")
-                    if len(query) > 2048:
-                        raise ValueError()
-                    fields = parse_qs(
-                        query,
-                        keep_blank_values=True,
-                        strict_parsing=True,
-                        max_num_fields=9,
-                    )
-                    if set(fields) - {
-                        "username",
-                        "device",
-                        "session",
-                        "action",
-                        "command",
-                        "since",
-                        "until",
-                        "before",
-                        "limit",
-                    } or any(len(v) != 1 for v in fields.values()):
-                        raise ValueError()
-                    values = {key: items[0] for key, items in fields.items()}
-                    if "limit" in values:
-                        if (
-                            not values["limit"].isascii()
-                            or not values["limit"].isdecimal()
-                            or len(values["limit"]) > 3
-                        ):
-                            raise ValueError()
-                        values["limit"] = int(values["limit"])
-                    return respond(
-                        "200 OK", self._accounting.list_events(user_id, **values)
-                    )
-                except PermissionError:
-                    return respond("403 Forbidden", {"error": "permission denied"})
-                except (ValueError, TypeError, KeyError):
-                    return respond(
-                        "400 Bad Request", {"error": "invalid accounting query"}
-                    )
+                return self._handle_accounting(environ, user_id, respond)
             if path in (
                 "/api/devices",
                 "/api/devices/delete",
                 "/api/devices/secret",
                 "/api/device-groups",
             ) and method in ("GET", "POST"):
-                if not self._permissions(user_id, "devices.manage"):
-                    return respond("403 Forbidden", {"error": "permission denied"})
-                if self._devices is None:
-                    return respond(
-                        "503 Service Unavailable",
-                        {"error": "device registry not provisioned"},
-                    )
-                if method == "GET":
-                    if path in ("/api/devices/delete", "/api/devices/secret"):
-                        return respond(
-                            "405 Method Not Allowed",
-                            {"error": "invalid device request; check fields and group"},
-                        )
-                    if path == "/api/device-groups":
-                        if environ.get("QUERY_STRING", ""):
-                            return respond(
-                                "400 Bad Request", {"error": "invalid device query"}
-                            )
-                        from .device_groups import DeviceGroups
-
-                        try:
-                            return respond(
-                                "200 OK",
-                                DeviceGroups(
-                                    self._devices.pool, self._devices.tenant
-                                ).list(actor=user_id),
-                            )
-                        except PermissionError:
-                            return respond(
-                                "403 Forbidden", {"error": "permission denied"}
-                            )
-                    from urllib.parse import parse_qs
-
-                    try:
-                        query = environ.get("QUERY_STRING", "")
-                        if len(query) > 512:
-                            raise ValueError()
-                        fields = parse_qs(
-                            query,
-                            keep_blank_values=True,
-                            strict_parsing=True,
-                            max_num_fields=6,
-                        )
-                        if set(fields) - {
-                            "search",
-                            "after",
-                            "limit",
-                            "status",
-                            "location_id",
-                            "device_type_id",
-                        } or any(len(v) != 1 for v in fields.values()):
-                            raise ValueError()
-                        values = {key: items[0] for key, items in fields.items()}
-                        if "limit" in values:
-                            if (
-                                not values["limit"].isascii()
-                                or not values["limit"].isdecimal()
-                                or len(values["limit"]) > 3
-                            ):
-                                raise ValueError()
-                            values["limit"] = int(values["limit"])
-                        return respond(
-                            "200 OK",
-                            self._devices.list_devices(actor=user_id, **values),
-                        )
-                    except PermissionError:
-                        return respond("403 Forbidden", {"error": "permission denied"})
-                    except (ValueError, TypeError, KeyError):
-                        return respond(
-                            "400 Bad Request", {"error": "invalid device query"}
-                        )
-                try:
-                    limited = path == "/api/devices/secret" or not self._permissions(
-                        user_id, "users.manage"
-                    )
-                    if limited and not self._device_write_limiter.allow(user_id):
-                        return respond(
-                            "429 Too Many Requests", {"error": "retry later"}
-                        )
-                    if environ.get("CONTENT_TYPE") != "application/json" or environ.get(
-                        "QUERY_STRING", ""
-                    ):
-                        raise ValueError()
-                    raw = _read_body(environ, 16384)
-
-                    def device_fields(pairs):
-                        result = {}
-                        for key, value in pairs:
-                            if key in result:
-                                raise ValueError()
-                            result[key] = value
-                        return result
-
-                    payload = json.loads(raw, object_pairs_hook=device_fields)
-                    if path == "/api/devices/delete":
-                        if not isinstance(payload, dict) or set(payload) != {"address"}:
-                            raise ValueError()
-                        return respond(
-                            "200 OK",
-                            self._devices.delete(
-                                user_id, payload["address"], self._device_audit
-                            ),
-                        )
-                    if path == "/api/devices/secret":
-                        if not isinstance(payload, dict) or set(payload) != {
-                            "address",
-                            "password",
-                        }:
-                            raise ValueError()
-                        password = payload["password"]
-                        if (
-                            not isinstance(password, str)
-                            or not 1 <= len(password) <= 1024
-                        ):
-                            raise ValueError()
-                        return respond(
-                            "200 OK",
-                            self._devices.reveal_secret(
-                                user_id,
-                                payload["address"],
-                                self._device_audit,
-                                password=password,
-                            ),
-                        )
-                    if path == "/api/device-groups":
-                        from .device_groups import DeviceGroups
-
-                        return respond(
-                            "200 OK",
-                            DeviceGroups(self._devices.pool, self._devices.tenant).save(
-                                user_id, payload, self._device_audit
-                            ),
-                        )
-                    return respond(
-                        "200 OK",
-                        self._devices.save(user_id, payload, self._device_audit),
-                    )
-                except PermissionError:
-                    return respond("403 Forbidden", {"error": "permission denied"})
-                except (ValueError, TypeError, KeyError, UnicodeError):
-                    return respond(
-                        "400 Bad Request",
-                        {"error": "invalid device request; check fields and group"},
-                    )
+                return self._handle_devices(environ, method, path, user_id, respond)
             if (
                 path in ("/api/identity-groups", "/api/identities/list")
                 and method == "GET"
                 and self._identities is not None
             ):
-                if not self._permissions(user_id, "users.manage"):
-                    return respond("403 Forbidden", {"error": "permission denied"})
-                try:
-                    from urllib.parse import parse_qs
-
-                    query = environ.get("QUERY_STRING", "")
-                    if len(query) > 100:
-                        raise ValueError()
-                    fields = parse_qs(
-                        query,
-                        strict_parsing=True,
-                        max_num_fields=1,
-                        keep_blank_values=True,
-                    )
-                    if set(fields) - {"after"} or any(
-                        len(v) != 1 for v in fields.values()
-                    ):
-                        raise ValueError()
-                    if path == "/api/identity-groups":
-                        from .identity_groups import IdentityGroups
-
-                        return respond(
-                            "200 OK",
-                            IdentityGroups(self._identities).list(
-                                user_id, fields.get("after", [None])[0]
-                            ),
-                        )
-                    return respond(
-                        "200 OK",
-                        self._identities.list_users(
-                            user_id, fields.get("after", [None])[0]
-                        ),
-                    )
-                except (ValueError, TypeError):
-                    return respond(
-                        "400 Bad Request", {"error": "invalid identity request"}
-                    )
+                return self._list_identities(environ, path, user_id, respond)
             if (
                 path
                 in (
@@ -786,359 +363,40 @@ class AdminApi:
                 and method == "POST"
                 and self._identities is not None
             ):
-                from .admin_identities import (
-                    IdentityProtectedError,
-                    IdentityNameUnavailable,
-                )
-
-                if not self._permissions(user_id, "users.manage"):
-                    return respond("403 Forbidden", {"error": "permission denied"})
-                try:
-                    if environ.get("CONTENT_TYPE") != "application/json" or environ.get(
-                        "QUERY_STRING", ""
-                    ):
-                        raise ValueError()
-                    raw = _read_body(environ, 16384)
-
-                    def identity_fields(pairs):
-                        result = {}
-                        for key, value in pairs:
-                            if key in result:
-                                raise ValueError()
-                            result[key] = value
-                        return result
-
-                    payload = json.loads(raw, object_pairs_hook=identity_fields)
-                    if path == "/api/identity-groups":
-                        from .identity_groups import IdentityGroups
-
-                        return respond(
-                            "200 OK",
-                            IdentityGroups(self._identities).save(user_id, payload),
-                        )
-                    if path == "/api/identities/console-access":
-                        if not isinstance(payload, dict) or set(payload) not in (
-                            {"user_id", "enabled"},
-                            {"user_id", "enabled", "access"},
-                        ):
-                            raise ValueError()
-                        return respond(
-                            "200 OK",
-                            self._identities.set_console_access(user_id, **payload),
-                        )
-                    actions = {
-                        "/api/identities": (
-                            {"username", "password", "group_name"},
-                            self._identities.create,
-                        ),
-                        "/api/identities/state": (
-                            {"user_id", "enabled"},
-                            self._identities.set_enabled,
-                        ),
-                        "/api/identities/update": (
-                            {
-                                "user_id",
-                                "username",
-                                "password",
-                                "group_name",
-                                "enabled",
-                            },
-                            self._identities.update,
-                        ),
-                        "/api/identities/delete": (
-                            {"user_id"},
-                            self._identities.delete,
-                        ),
-                        "/api/identities/unlock": (
-                            {"user_id"},
-                            self._identities.unlock,
-                        ),
-                    }
-                    fields, action = actions[path]
-                    if not isinstance(payload, dict) or set(payload) != fields:
-                        raise ValueError()
-                    return respond(
-                        "201 Created" if path == "/api/identities" else "200 OK",
-                        action(user_id, **payload),
-                    )
-                except IdentityProtectedError:
-                    return respond("400 Bad Request", {"error": "identity protected"})
-                except IdentityNameUnavailable:
-                    return respond("400 Bad Request", {"error": "username unavailable"})
-                except PermissionError:
-                    return respond("403 Forbidden", {"error": "permission denied"})
-                except (ValueError, KeyError, TypeError, UnicodeError):
-                    return respond(
-                        "400 Bad Request", {"error": "invalid identity request"}
-                    )
+                return self._handle_identities(environ, path, user_id, respond)
             if (
                 path == "/api/password"
                 and method == "POST"
                 and self._password_change is not None
             ):
-                if not self._password_limiter.allow(user_id):
-                    return respond("429 Too Many Requests", {"error": "retry later"})
-                try:
-                    if environ.get("CONTENT_TYPE") != "application/json" or environ.get(
-                        "QUERY_STRING", ""
-                    ):
-                        raise ValueError()
-                    raw = _read_body(environ, 16384)
-
-                    def exact_fields(pairs):
-                        result = {}
-                        for key, value in pairs:
-                            if key in result:
-                                raise ValueError()
-                            result[key] = value
-                        return result
-
-                    payload = json.loads(raw, object_pairs_hook=exact_fields)
-                    if not isinstance(payload, dict) or set(payload) != {
-                        "current_password",
-                        "new_password",
-                    }:
-                        raise ValueError()
-                    self._password_change.change(user_id, **payload)
-                    return respond(
-                        "200 OK",
-                        {"status": "password changed; sign in again"},
-                        [
-                            (
-                                "Set-Cookie",
-                                f"{COOKIE_NAME}=; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=0",
-                            )
-                        ],
-                    )
-                except PermissionError:
-                    return respond(
-                        "403 Forbidden", {"error": "password verification failed"}
-                    )
-                except (ValueError, KeyError, UnicodeError):
-                    return respond(
-                        "400 Bad Request", {"error": "invalid password change"}
-                    )
+                return self._handle_password(environ, user_id, respond)
             if method == "GET" and (
                 (path == "/api/policies" and self._policies is not None)
                 or (path == "/api/audit" and self._audit is not None)
             ):
-                from urllib.parse import parse_qs
-
-                try:
-                    query = environ.get("QUERY_STRING", "")
-                    if len(query) > 128:
-                        raise ValueError("query too large")
-                    fields = parse_qs(
-                        query,
-                        keep_blank_values=True,
-                        strict_parsing=True,
-                        max_num_fields=2,
-                    )
-                    if set(fields) - {"before", "limit"} or any(
-                        len(value) != 1 for value in fields.values()
-                    ):
-                        raise ValueError("invalid pagination")
-                    values = {}
-                    for name, entries in fields.items():
-                        value = entries[0]
-                        if (
-                            not value.isascii()
-                            or not value.isdecimal()
-                            or len(value) > 19
-                        ):
-                            raise ValueError("invalid pagination")
-                        values[name] = int(value)
-                    read = (
-                        self._audit.list_events
-                        if path == "/api/audit"
-                        else self._policies.list_versions
-                    )
-                    return respond("200 OK", read(user_id, **values))
-                except PermissionError:
-                    return respond("403 Forbidden", {"error": "permission denied"})
-                except ValueError:
-                    return respond("400 Bad Request", {"error": "invalid pagination"})
+                return self._list_policies_or_audit(environ, path, user_id, respond)
             if (
                 method == "GET"
                 and self._simulation is not None
                 and path.startswith("/api/policies/")
             ):
-                parts = path.split("/")
-                if len(parts) in (5, 6) and parts[4] == "simulation-records":
-                    from urllib.parse import parse_qs
-
-                    try:
-                        query = environ.get("QUERY_STRING", "")
-                        if len(query) > 128:
-                            raise ValueError("query too large")
-                        if len(parts) == 6:
-                            if query:
-                                raise ValueError("unexpected detail query")
-                            result = self._simulation.inspect_record(
-                                parts[3], user_id, parts[5]
-                            )
-                        else:
-                            fields = parse_qs(
-                                query,
-                                keep_blank_values=True,
-                                strict_parsing=True,
-                                max_num_fields=2,
-                            )
-                            if set(fields) - {"before", "limit"} or any(
-                                len(value) != 1 for value in fields.values()
-                            ):
-                                raise ValueError("invalid evidence pagination")
-                            values = {
-                                name: entries[0] for name, entries in fields.items()
-                            }
-                            if "limit" in values:
-                                limit = values["limit"]
-                                if (
-                                    not limit.isascii()
-                                    or not limit.isdecimal()
-                                    or len(limit) > 2
-                                ):
-                                    raise ValueError("invalid evidence page limit")
-                                values["limit"] = int(limit)
-                            if "before" in values and not values["before"]:
-                                raise ValueError("empty evidence cursor")
-                            result = self._simulation.list_records(
-                                parts[3], user_id, **values
-                            )
-                        if result is None:
-                            return respond("404 Not Found", {"error": "not found"})
-                        return respond("200 OK", result)
-                    except PermissionError:
-                        return respond("403 Forbidden", {"error": "permission denied"})
-                    except ValueError:
-                        return respond(
-                            "400 Bad Request", {"error": "invalid evidence request"}
-                        )
+                result = self._handle_simulation_reports(
+                    environ, path, user_id, respond
+                )
+                if result is not None:
+                    return result
             if (
                 method == "GET"
                 and self._policies is not None
                 and path.startswith("/api/policies/")
             ):
-                parts = path.split("/")
-                if len(parts) != 4:
-                    return respond("404 Not Found", {"error": "not found"})
-                try:
-                    policy = self._policies.inspect(parts[3], user_id)
-                    if policy is None:
-                        return respond("404 Not Found", {"error": "not found"})
-                    return respond("200 OK", policy)
-                except PermissionError:
-                    return respond("403 Forbidden", {"error": "permission denied"})
-                except ValueError:
-                    return respond(
-                        "400 Bad Request", {"error": "invalid policy request"}
-                    )
+                return self._get_policy(environ, path, user_id, respond)
             if (
                 method == "POST"
                 and self._policies is not None
                 and (path == "/api/policies" or path.startswith("/api/policies/"))
             ):
-                if environ.get("CONTENT_TYPE") != "application/json":
-                    return respond(
-                        "415 Unsupported Media Type", {"error": "JSON required"}
-                    )
-                try:
-                    raw = _read_body(environ, 65536)
-
-                    def unique(pairs):
-                        result = {}
-                        for key, value in pairs:
-                            if key in result:
-                                raise ValueError("duplicate field")
-                            result[key] = value
-                        return result
-
-                    payload = json.loads(raw, object_pairs_hook=unique)
-                    if not isinstance(payload, dict):
-                        raise ValueError("object required")
-                    if path == "/api/policies":
-                        if set(payload) != {"rules"}:
-                            raise ValueError("invalid draft schema")
-                        version = self._policies.draft(user_id, payload["rules"])
-                        return respond("201 Created", {"version_id": version})
-                    parts = path.split("/")
-                    if (
-                        len(parts) == 7
-                        and parts[4] == "simulation-records"
-                        and parts[6] == "verify"
-                        and self._simulation is not None
-                    ):
-                        if set(payload) != {"samples"} or environ.get(
-                            "QUERY_STRING", ""
-                        ):
-                            raise ValueError("simulation samples required")
-                        result = self._simulation.verify_record(
-                            parts[3], user_id, parts[5], payload["samples"]
-                        )
-                        return (
-                            respond("404 Not Found", {"error": "not found"})
-                            if result is None
-                            else respond("200 OK", result)
-                        )
-                    if len(parts) != 5:
-                        raise ValueError("invalid policy route")
-                    version, action = parts[3:]
-                    if action == "simulate" and self._simulation is not None:
-                        if set(payload) != {"samples"}:
-                            raise ValueError("simulation samples required")
-                        return respond(
-                            "200 OK",
-                            self._simulation.compare(
-                                version, user_id, payload["samples"]
-                            ),
-                        )
-                    if action == "simulation-records" and self._simulation is not None:
-                        if set(payload) != {"samples"}:
-                            raise ValueError("simulation samples required")
-                        return respond(
-                            "201 Created",
-                            self._simulation.record(
-                                version, user_id, payload["samples"]
-                            ),
-                        )
-                    if action == "test":
-                        if set(payload) != {"cases"}:
-                            raise ValueError("test cases required")
-                        report = self._policies.test_version(
-                            version, user_id, payload["cases"]
-                        )
-                        return respond(
-                            "200 OK",
-                            {
-                                "total": report.total,
-                                "rules_digest": report.rules_digest,
-                                "cases_digest": report.cases_digest,
-                            },
-                        )
-                    if payload:
-                        raise ValueError("empty transition object required")
-                    if action == "discard":
-                        self._policies.discard(version, user_id)
-                        return respond("200 OK", {"status": "committed"})
-                    if action == "rollback":
-                        return respond(
-                            "201 Created",
-                            {
-                                "version_id": self._policies.rollback_draft(
-                                    version, user_id
-                                )
-                            },
-                        )
-                    if action not in ("submit", "approve", "activate"):
-                        raise ValueError("unsupported action")
-                    self._policies.transition(version, user_id, action)
-                    return respond("200 OK", {"status": "committed"})
-                except PermissionError:
-                    return respond("403 Forbidden", {"error": "permission denied"})
-                except (ValueError, KeyError, UnicodeError):
-                    return respond(
-                        "400 Bad Request", {"error": "invalid policy request"}
-                    )
+                return self._handle_policies(environ, path, user_id, respond)
             if path == "/api/logout" and method == "POST":
                 self._sessions.revoke(token)
                 self._record_web_access(environ, "web.logout", "success", actor=user_id)
@@ -1156,3 +414,664 @@ class AdminApi:
         except Exception:
             # Never return exception text, DB diagnostics or bearer credentials.
             return respond("503 Service Unavailable", {"error": "service unavailable"})
+
+    def _handle_login(self, environ, respond):
+        if environ.get("HTTP_ORIGIN") != self._origin:
+            return respond("403 Forbidden", {"error": "request verification failed"})
+        # Use trusted socket or relay metadata, never X-Forwarded-For.
+        peer = environ.get("REMOTE_ADDR")
+        if environ.get("tnac.via_proxy") is True:
+            peer = audit_ip(environ.get("tnac.source_ip")) or peer
+        if not isinstance(peer, str) or not peer or not self._login_limiter.allow(peer):
+            return respond("429 Too Many Requests", {"error": "retry later"})
+        if environ.get("CONTENT_TYPE") != "application/json":
+            return respond("415 Unsupported Media Type", {"error": "JSON required"})
+        try:
+            body = _read_json(environ, 8192)
+            fields = (
+                {"username", "password"}
+                if self.password_only
+                else {"username", "password", "factor_id", "code"}
+            )
+            if not isinstance(body, dict) or set(body) != fields:
+                raise ValueError("invalid login schema")
+        except (ValueError, KeyError, UnicodeError):
+            return respond("400 Bad Request", {"error": "invalid request"})
+        try:
+            new_token = self._login.login(**body)
+            if new_token is None:
+                self._record_web_access(
+                    environ, "web.login", "fail", username=body["username"]
+                )
+                return respond("401 Unauthorized", {"error": "invalid credentials"})
+            response = {
+                "status": "authenticated",
+                "csrf_token": self.csrf_token(new_token),
+            }
+            cookie = self.session_cookie(new_token)
+            self._record_web_access(
+                environ,
+                "web.login",
+                "success",
+                username=body["username"],
+                token=new_token,
+            )
+            return respond("200 OK", response, [("Set-Cookie", cookie)])
+        except Exception:
+            return respond("503 Service Unavailable", {"error": "service unavailable"})
+
+    def _handle_syslog_profiles(self, environ, method, user_id, respond):
+        if not self._permissions(user_id, "users.manage"):
+            return respond("403 Forbidden", {"error": "permission denied"})
+        if environ.get("QUERY_STRING"):
+            return respond("400 Bad Request", {"error": "unexpected query"})
+        from .syslog_profiles import (
+            change_profile,
+            read_profiles,
+            validate_change,
+        )
+
+        if method == "GET":
+            return respond("200 OK", {"profiles": read_profiles()})
+        if method != "POST":
+            return respond("405 Method Not Allowed", {"error": "method not allowed"})
+        try:
+            if environ.get("CONTENT_TYPE") != "application/json":
+                raise ValueError("invalid body")
+            raw = _read_body(environ, 1024)
+            change = validate_change(json.loads(raw))
+            if self._web_audit is None:
+                raise RuntimeError("profile audit unavailable")
+            self._web_audit(
+                actor=user_id,
+                source="admin-syslog",
+                action="syslog.profile." + change[0],
+                target=change[1],
+                result="requested",
+                security_context={},
+            )
+            change_profile(change)
+        except ValueError:
+            return respond("400 Bad Request", {"error": "invalid syslog profile"})
+        return respond("200 OK", {"profiles": read_profiles()})
+
+    def _handle_syslog_search(self, environ, method, user_id, respond):
+        if not self._permissions(user_id, "users.manage"):
+            return respond("403 Forbidden", {"error": "permission denied"})
+        if method != "GET":
+            return respond("405 Method Not Allowed", {"error": "method not allowed"})
+        from .device_syslog import search
+
+        query = environ.get("QUERY_STRING", "")
+        if len(query) > 2048:
+            return respond("400 Bad Request", {"error": "invalid syslog filters"})
+        try:
+            return respond("200 OK", search(query))
+        except (ValueError, OverflowError):
+            return respond("400 Bad Request", {"error": "invalid syslog filters"})
+
+    def _handle_alerts(self, environ, method, path, user_id, respond):
+        if not self._permissions(user_id, "users.manage"):
+            return respond("403 Forbidden", {"error": "permission denied"})
+        if environ.get("QUERY_STRING", ""):
+            return respond("400 Bad Request", {"error": "unexpected query"})
+        if path == "/api/alerts" and method == "GET":
+            return respond("200 OK", self._alerts.public())
+        if method != "POST":
+            return respond("405 Method Not Allowed", {"error": "method not allowed"})
+        try:
+            if environ.get("CONTENT_TYPE") != "application/json":
+                raise ValueError("invalid body")
+            values = _read_json(environ, 4096)
+            if path == "/api/alerts/test" and values != {}:
+                raise ValueError("invalid test request")
+            if self._web_audit is None:
+                raise RuntimeError("alert audit unavailable")
+            self._web_audit(
+                actor=user_id,
+                source="admin-alerts",
+                action="slack.alerts.test"
+                if path.endswith("/test")
+                else "slack.alerts.configure",
+                target="slack",
+                result="requested",
+                security_context={},
+            )
+            if path.endswith("/test"):
+                return respond("202 Accepted", self._alerts.request_test())
+            return respond("200 OK", self._alerts.save(values))
+        except (ValueError, TypeError, KeyError, UnicodeError):
+            return respond(
+                "400 Bad Request",
+                {"error": "invalid alert settings or test cooldown"},
+            )
+
+    def _handle_logs(self, environ, path, user_id, respond):
+        if not (
+            self._permissions(user_id, "audit.read")
+            or (path == "/api/logs" and self._permissions(user_id, "devices.aaa.read"))
+        ):
+            return respond("403 Forbidden", {"error": "permission denied"})
+        from urllib.parse import parse_qs
+
+        try:
+            query = environ.get("QUERY_STRING", "")
+            if len(query) > 4096:
+                raise ValueError()
+            fields = parse_qs(
+                query,
+                keep_blank_values=True,
+                strict_parsing=True,
+                max_num_fields=12,
+            )
+            if set(fields) - {
+                "kind",
+                "search",
+                "action",
+                "result",
+                "device",
+                "session",
+                "actor",
+                "since",
+                "until",
+                "before",
+                "limit",
+            } or any(len(v) != 1 for v in fields.values()):
+                raise ValueError()
+            values = {key: items[0] for key, items in fields.items()}
+            if "limit" in values:
+                if (
+                    not values["limit"].isascii()
+                    or not values["limit"].isdecimal()
+                    or len(values["limit"]) > 3
+                ):
+                    raise ValueError()
+                values["limit"] = int(values["limit"])
+            return respond(
+                "200 OK",
+                self._logs.read(user_id, report=path == "/api/reports", **values),
+            )
+        except PermissionError:
+            return respond("403 Forbidden", {"error": "permission denied"})
+        except (ValueError, TypeError, KeyError, OverflowError):
+            return respond("400 Bad Request", {"error": "invalid log query"})
+
+    def _handle_accounting(self, environ, user_id, respond):
+        if not (
+            self._permissions(user_id, "audit.read")
+            or self._permissions(user_id, "devices.aaa.read")
+        ):
+            return respond("403 Forbidden", {"error": "permission denied"})
+        from urllib.parse import parse_qs
+
+        try:
+            query = environ.get("QUERY_STRING", "")
+            if len(query) > 2048:
+                raise ValueError()
+            fields = parse_qs(
+                query,
+                keep_blank_values=True,
+                strict_parsing=True,
+                max_num_fields=9,
+            )
+            if set(fields) - {
+                "username",
+                "device",
+                "session",
+                "action",
+                "command",
+                "since",
+                "until",
+                "before",
+                "limit",
+            } or any(len(v) != 1 for v in fields.values()):
+                raise ValueError()
+            values = {key: items[0] for key, items in fields.items()}
+            if "limit" in values:
+                if (
+                    not values["limit"].isascii()
+                    or not values["limit"].isdecimal()
+                    or len(values["limit"]) > 3
+                ):
+                    raise ValueError()
+                values["limit"] = int(values["limit"])
+            return respond("200 OK", self._accounting.list_events(user_id, **values))
+        except PermissionError:
+            return respond("403 Forbidden", {"error": "permission denied"})
+        except (ValueError, TypeError, KeyError):
+            return respond("400 Bad Request", {"error": "invalid accounting query"})
+
+    def _handle_devices(self, environ, method, path, user_id, respond):
+        if not self._permissions(user_id, "devices.manage"):
+            return respond("403 Forbidden", {"error": "permission denied"})
+        if self._devices is None:
+            return respond(
+                "503 Service Unavailable",
+                {"error": "device registry not provisioned"},
+            )
+        if method == "GET":
+            if path in ("/api/devices/delete", "/api/devices/secret"):
+                return respond(
+                    "405 Method Not Allowed",
+                    {"error": "invalid device request; check fields and group"},
+                )
+            if path == "/api/device-groups":
+                if environ.get("QUERY_STRING", ""):
+                    return respond("400 Bad Request", {"error": "invalid device query"})
+                from .device_groups import DeviceGroups
+
+                try:
+                    return respond(
+                        "200 OK",
+                        DeviceGroups(self._devices.pool, self._devices.tenant).list(
+                            actor=user_id
+                        ),
+                    )
+                except PermissionError:
+                    return respond("403 Forbidden", {"error": "permission denied"})
+            from urllib.parse import parse_qs
+
+            try:
+                query = environ.get("QUERY_STRING", "")
+                if len(query) > 512:
+                    raise ValueError()
+                fields = parse_qs(
+                    query,
+                    keep_blank_values=True,
+                    strict_parsing=True,
+                    max_num_fields=6,
+                )
+                if set(fields) - {
+                    "search",
+                    "after",
+                    "limit",
+                    "status",
+                    "location_id",
+                    "device_type_id",
+                } or any(len(v) != 1 for v in fields.values()):
+                    raise ValueError()
+                values = {key: items[0] for key, items in fields.items()}
+                if "limit" in values:
+                    if (
+                        not values["limit"].isascii()
+                        or not values["limit"].isdecimal()
+                        or len(values["limit"]) > 3
+                    ):
+                        raise ValueError()
+                    values["limit"] = int(values["limit"])
+                return respond(
+                    "200 OK",
+                    self._devices.list_devices(actor=user_id, **values),
+                )
+            except PermissionError:
+                return respond("403 Forbidden", {"error": "permission denied"})
+            except (ValueError, TypeError, KeyError):
+                return respond("400 Bad Request", {"error": "invalid device query"})
+        try:
+            limited = path == "/api/devices/secret" or not self._permissions(
+                user_id, "users.manage"
+            )
+            if limited and not self._device_write_limiter.allow(user_id):
+                return respond("429 Too Many Requests", {"error": "retry later"})
+            if environ.get("CONTENT_TYPE") != "application/json" or environ.get(
+                "QUERY_STRING", ""
+            ):
+                raise ValueError()
+            payload = _read_json(environ, 16384)
+            if path == "/api/devices/delete":
+                if not isinstance(payload, dict) or set(payload) != {"address"}:
+                    raise ValueError()
+                return respond(
+                    "200 OK",
+                    self._devices.delete(
+                        user_id, payload["address"], self._device_audit
+                    ),
+                )
+            if path == "/api/devices/secret":
+                if not isinstance(payload, dict) or set(payload) != {
+                    "address",
+                    "password",
+                }:
+                    raise ValueError()
+                password = payload["password"]
+                if not isinstance(password, str) or not 1 <= len(password) <= 1024:
+                    raise ValueError()
+                return respond(
+                    "200 OK",
+                    self._devices.reveal_secret(
+                        user_id,
+                        payload["address"],
+                        self._device_audit,
+                        password=password,
+                    ),
+                )
+            if path == "/api/device-groups":
+                from .device_groups import DeviceGroups
+
+                return respond(
+                    "200 OK",
+                    DeviceGroups(self._devices.pool, self._devices.tenant).save(
+                        user_id, payload, self._device_audit
+                    ),
+                )
+            return respond(
+                "200 OK",
+                self._devices.save(user_id, payload, self._device_audit),
+            )
+        except PermissionError:
+            return respond("403 Forbidden", {"error": "permission denied"})
+        except (ValueError, TypeError, KeyError, UnicodeError):
+            return respond(
+                "400 Bad Request",
+                {"error": "invalid device request; check fields and group"},
+            )
+
+    def _list_identities(self, environ, path, user_id, respond):
+        if not self._permissions(user_id, "users.manage"):
+            return respond("403 Forbidden", {"error": "permission denied"})
+        try:
+            from urllib.parse import parse_qs
+
+            query = environ.get("QUERY_STRING", "")
+            if len(query) > 100:
+                raise ValueError()
+            fields = parse_qs(
+                query,
+                strict_parsing=True,
+                max_num_fields=1,
+                keep_blank_values=True,
+            )
+            if set(fields) - {"after"} or any(len(v) != 1 for v in fields.values()):
+                raise ValueError()
+            if path == "/api/identity-groups":
+                from .identity_groups import IdentityGroups
+
+                return respond(
+                    "200 OK",
+                    IdentityGroups(self._identities).list(
+                        user_id, fields.get("after", [None])[0]
+                    ),
+                )
+            return respond(
+                "200 OK",
+                self._identities.list_users(user_id, fields.get("after", [None])[0]),
+            )
+        except (ValueError, TypeError):
+            return respond("400 Bad Request", {"error": "invalid identity request"})
+
+    def _handle_identities(self, environ, path, user_id, respond):
+        from .admin_identities import (
+            IdentityProtectedError,
+            IdentityNameUnavailable,
+        )
+
+        if not self._permissions(user_id, "users.manage"):
+            return respond("403 Forbidden", {"error": "permission denied"})
+        try:
+            if environ.get("CONTENT_TYPE") != "application/json" or environ.get(
+                "QUERY_STRING", ""
+            ):
+                raise ValueError()
+            payload = _read_json(environ, 16384)
+            if path == "/api/identity-groups":
+                from .identity_groups import IdentityGroups
+
+                return respond(
+                    "200 OK",
+                    IdentityGroups(self._identities).save(user_id, payload),
+                )
+            if path == "/api/identities/console-access":
+                if not isinstance(payload, dict) or set(payload) not in (
+                    {"user_id", "enabled"},
+                    {"user_id", "enabled", "access"},
+                ):
+                    raise ValueError()
+                return respond(
+                    "200 OK",
+                    self._identities.set_console_access(user_id, **payload),
+                )
+            actions = {
+                "/api/identities": (
+                    {"username", "password", "group_name"},
+                    self._identities.create,
+                ),
+                "/api/identities/state": (
+                    {"user_id", "enabled"},
+                    self._identities.set_enabled,
+                ),
+                "/api/identities/update": (
+                    {
+                        "user_id",
+                        "username",
+                        "password",
+                        "group_name",
+                        "enabled",
+                    },
+                    self._identities.update,
+                ),
+                "/api/identities/delete": (
+                    {"user_id"},
+                    self._identities.delete,
+                ),
+                "/api/identities/unlock": (
+                    {"user_id"},
+                    self._identities.unlock,
+                ),
+            }
+            fields, action = actions[path]
+            if not isinstance(payload, dict) or set(payload) != fields:
+                raise ValueError()
+            return respond(
+                "201 Created" if path == "/api/identities" else "200 OK",
+                action(user_id, **payload),
+            )
+        except IdentityProtectedError:
+            return respond("400 Bad Request", {"error": "identity protected"})
+        except IdentityNameUnavailable:
+            return respond("400 Bad Request", {"error": "username unavailable"})
+        except PermissionError:
+            return respond("403 Forbidden", {"error": "permission denied"})
+        except (ValueError, KeyError, TypeError, UnicodeError):
+            return respond("400 Bad Request", {"error": "invalid identity request"})
+
+    def _handle_password(self, environ, user_id, respond):
+        if not self._password_limiter.allow(user_id):
+            return respond("429 Too Many Requests", {"error": "retry later"})
+        try:
+            if environ.get("CONTENT_TYPE") != "application/json" or environ.get(
+                "QUERY_STRING", ""
+            ):
+                raise ValueError()
+            payload = _read_json(environ, 16384)
+            if not isinstance(payload, dict) or set(payload) != {
+                "current_password",
+                "new_password",
+            }:
+                raise ValueError()
+            self._password_change.change(user_id, **payload)
+            return respond(
+                "200 OK",
+                {"status": "password changed; sign in again"},
+                [
+                    (
+                        "Set-Cookie",
+                        f"{COOKIE_NAME}=; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=0",
+                    )
+                ],
+            )
+        except PermissionError:
+            return respond("403 Forbidden", {"error": "password verification failed"})
+        except (ValueError, KeyError, UnicodeError):
+            return respond("400 Bad Request", {"error": "invalid password change"})
+
+    def _list_policies_or_audit(self, environ, path, user_id, respond):
+        from urllib.parse import parse_qs
+
+        try:
+            query = environ.get("QUERY_STRING", "")
+            if len(query) > 128:
+                raise ValueError("query too large")
+            fields = parse_qs(
+                query,
+                keep_blank_values=True,
+                strict_parsing=True,
+                max_num_fields=2,
+            )
+            if set(fields) - {"before", "limit"} or any(
+                len(value) != 1 for value in fields.values()
+            ):
+                raise ValueError("invalid pagination")
+            values = {}
+            for name, entries in fields.items():
+                value = entries[0]
+                if not value.isascii() or not value.isdecimal() or len(value) > 19:
+                    raise ValueError("invalid pagination")
+                values[name] = int(value)
+            read = (
+                self._audit.list_events
+                if path == "/api/audit"
+                else self._policies.list_versions
+            )
+            return respond("200 OK", read(user_id, **values))
+        except PermissionError:
+            return respond("403 Forbidden", {"error": "permission denied"})
+        except ValueError:
+            return respond("400 Bad Request", {"error": "invalid pagination"})
+
+    def _handle_simulation_reports(self, environ, path, user_id, respond):
+        parts = path.split("/")
+        if len(parts) in (5, 6) and parts[4] == "simulation-records":
+            from urllib.parse import parse_qs
+
+            try:
+                query = environ.get("QUERY_STRING", "")
+                if len(query) > 128:
+                    raise ValueError("query too large")
+                if len(parts) == 6:
+                    if query:
+                        raise ValueError("unexpected detail query")
+                    result = self._simulation.inspect_record(
+                        parts[3], user_id, parts[5]
+                    )
+                else:
+                    fields = parse_qs(
+                        query,
+                        keep_blank_values=True,
+                        strict_parsing=True,
+                        max_num_fields=2,
+                    )
+                    if set(fields) - {"before", "limit"} or any(
+                        len(value) != 1 for value in fields.values()
+                    ):
+                        raise ValueError("invalid evidence pagination")
+                    values = {name: entries[0] for name, entries in fields.items()}
+                    if "limit" in values:
+                        limit = values["limit"]
+                        if (
+                            not limit.isascii()
+                            or not limit.isdecimal()
+                            or len(limit) > 2
+                        ):
+                            raise ValueError("invalid evidence page limit")
+                        values["limit"] = int(limit)
+                    if "before" in values and not values["before"]:
+                        raise ValueError("empty evidence cursor")
+                    result = self._simulation.list_records(parts[3], user_id, **values)
+                if result is None:
+                    return respond("404 Not Found", {"error": "not found"})
+                return respond("200 OK", result)
+            except PermissionError:
+                return respond("403 Forbidden", {"error": "permission denied"})
+            except ValueError:
+                return respond("400 Bad Request", {"error": "invalid evidence request"})
+
+    def _get_policy(self, environ, path, user_id, respond):
+        parts = path.split("/")
+        if len(parts) != 4:
+            return respond("404 Not Found", {"error": "not found"})
+        try:
+            policy = self._policies.inspect(parts[3], user_id)
+            if policy is None:
+                return respond("404 Not Found", {"error": "not found"})
+            return respond("200 OK", policy)
+        except PermissionError:
+            return respond("403 Forbidden", {"error": "permission denied"})
+        except ValueError:
+            return respond("400 Bad Request", {"error": "invalid policy request"})
+
+    def _handle_policies(self, environ, path, user_id, respond):
+        if environ.get("CONTENT_TYPE") != "application/json":
+            return respond("415 Unsupported Media Type", {"error": "JSON required"})
+        try:
+            payload = _read_json(environ, 65536)
+            if not isinstance(payload, dict):
+                raise ValueError("object required")
+            if path == "/api/policies":
+                if set(payload) != {"rules"}:
+                    raise ValueError("invalid draft schema")
+                version = self._policies.draft(user_id, payload["rules"])
+                return respond("201 Created", {"version_id": version})
+            parts = path.split("/")
+            if (
+                len(parts) == 7
+                and parts[4] == "simulation-records"
+                and parts[6] == "verify"
+                and self._simulation is not None
+            ):
+                if set(payload) != {"samples"} or environ.get("QUERY_STRING", ""):
+                    raise ValueError("simulation samples required")
+                result = self._simulation.verify_record(
+                    parts[3], user_id, parts[5], payload["samples"]
+                )
+                return (
+                    respond("404 Not Found", {"error": "not found"})
+                    if result is None
+                    else respond("200 OK", result)
+                )
+            if len(parts) != 5:
+                raise ValueError("invalid policy route")
+            version, action = parts[3:]
+            if action == "simulate" and self._simulation is not None:
+                if set(payload) != {"samples"}:
+                    raise ValueError("simulation samples required")
+                return respond(
+                    "200 OK",
+                    self._simulation.compare(version, user_id, payload["samples"]),
+                )
+            if action == "simulation-records" and self._simulation is not None:
+                if set(payload) != {"samples"}:
+                    raise ValueError("simulation samples required")
+                return respond(
+                    "201 Created",
+                    self._simulation.record(version, user_id, payload["samples"]),
+                )
+            if action == "test":
+                if set(payload) != {"cases"}:
+                    raise ValueError("test cases required")
+                report = self._policies.test_version(version, user_id, payload["cases"])
+                return respond(
+                    "200 OK",
+                    {
+                        "total": report.total,
+                        "rules_digest": report.rules_digest,
+                        "cases_digest": report.cases_digest,
+                    },
+                )
+            if payload:
+                raise ValueError("empty transition object required")
+            if action == "discard":
+                self._policies.discard(version, user_id)
+                return respond("200 OK", {"status": "committed"})
+            if action == "rollback":
+                return respond(
+                    "201 Created",
+                    {"version_id": self._policies.rollback_draft(version, user_id)},
+                )
+            if action not in ("submit", "approve", "activate"):
+                raise ValueError("unsupported action")
+            self._policies.transition(version, user_id, action)
+            return respond("200 OK", {"status": "committed"})
+        except PermissionError:
+            return respond("403 Forbidden", {"error": "permission denied"})
+        except (ValueError, KeyError, UnicodeError):
+            return respond("400 Bad Request", {"error": "invalid policy request"})
