@@ -2,6 +2,12 @@
 
 [English](CHANGELOG.md) · **Tiếng Việt**
 
+## v1.1.9 — 26/11/2026
+
+- Đưa source React gốc và lockfile vào repository. GitHub Actions kiểm tra kiểu dữ liệu, chạy test và build riêng. Bộ cài tiếp tục dùng console hiện hành.
+- Mở rộng Ruff lint và kiểm tra định dạng sang toàn bộ tệp Python trong src/ và scripts/.
+- Nghiệm thu với stack tạm: build và test React, Compose TLS và cô lập mount, sao lưu và khôi phục PostgreSQL, đối chiếu migration và 534 bài regression đều đạt. Không có bài bị bỏ qua.
+
 ## v1.1.8 — 26/11/2026
 
 - Tính hạn mức đăng nhập Web theo IP nguồn do HTTPS relay đã xác thực cung cấp. Kết nối trực tiếp dùng IP của socket.

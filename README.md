@@ -1,4 +1,4 @@
-# TNAC+ v1.1.8
+# TNAC+ v1.1.9
 
 **English** · [Tiếng Việt](README.vi.md)
 

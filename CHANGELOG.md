@@ -2,6 +2,12 @@
 
 **English** · [Tiếng Việt](CHANGELOG.vi.md)
 
+## v1.1.9 — 2026-11-26
+
+- Add the original React source and dependency lockfile. GitHub Actions type-checks, tests and builds it separately while the installer continues to use the currently shipped console.
+- Apply Ruff lint and formatting checks to all Python files in src/ and scripts/.
+- Lab verification on a disposable stack: React build and source tests, Compose TLS and mount isolation, PostgreSQL backup/restore and migration checks, and 534 regression tests passed with no skips.
+
 ## v1.1.8 — 2026-11-26
 
 - Apply Web login rate limits to each verified HTTPS relay source IP. Direct connections use the socket peer.
